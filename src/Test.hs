@@ -4,7 +4,7 @@ module Test where
 import Scheme.Types
 import Control.Monad.Trans
 
-foo :: InterpM Lisp
-foo = do
-  liftIO $ putStrLn "hello ffi"
+foo :: [Lisp] -> InterpM Lisp
+foo [] = do
+  liftIO $ putStrLn "hello haskell"
   return Void
