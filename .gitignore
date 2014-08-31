@@ -1,5 +1,7 @@
 dist
 cabal-dev
+*.dll
+*.exe
 *.o
 *.hi
 *.chi
