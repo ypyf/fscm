@@ -1,4 +1,4 @@
-(define (is a b) (display (eqv? a b)) (newline))
+(define (is a b) (display (equal? a b)) (newline))
 
 ; 应该等价于(list 1)，所以输出的是 ==> (1)
 ; 在某些错误的实现中(比如tinyscheme 1.41)，等价于(quote if)，所以输出的是 ==> if

@@ -470,6 +470,25 @@ eqv [List arg1, List arg2] = return $ if (length arg1 == length arg2) && (and $ 
 eqv [_, _] = return LispFalse
 eqv badArgList = throwError $ NumArgs 2 badArgList
 
+
+equal :: [Lisp] -> ThrowsError Lisp
+equal [LispTrue, LispTrue] = return LispTrue
+equal [LispFalse, LispFalse] = return LispTrue
+equal [LispTrue, LispFalse] = return LispFalse
+equal [LispFalse, LispTrue] = return LispFalse
+equal [Char c1, Char c2] = return $ if c1 == c2 then LispTrue else LispFalse
+equal [Number arg1, Number arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
+equal [String arg1, String arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
+equal [Symbol arg1, Symbol arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
+equal [DotList xs x, DotList ys y] = equal [List $ xs ++ [x], List $ ys ++ [y]]
+equal [List arg1, List arg2] = return $ if (length arg1 == length arg2) && (and $ map equalPair $ zip arg1 arg2) then LispTrue else LispFalse
+    where equalPair (x1, x2) = case equal [x1, x2] of
+                               Left err -> False
+                               Right LispTrue -> True
+                               Right _ -> False
+
+equal [_, _] = return LispFalse
+equal badArgList = throwError $ NumArgs 2 badArgList
 {-
 eqv' :: Lisp -> Lisp -> Bool
 eqv' (Bool arg1) (Bool arg2) = arg1 == arg2
@@ -582,9 +601,7 @@ primitives =
       -- 列表操作
       ("car", car), ("cdr", cdr), ("cons", cons),
 
-      -- r5rs定义了三种: eq? eqv? equal?
-      -- 前两个基本相同
-      ("eq?", eqv), ("eqv?", eqv)
+      ("eq?", eqv), ("eqv?", eqv), ("equal?", equal)
     ]
 
 -- 内置IO函数查询表
