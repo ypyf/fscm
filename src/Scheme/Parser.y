@@ -43,7 +43,7 @@ Lisp : {- empty -} { [] }
 
 Datum : eof          { EOF }
       | boolean      { if $1 == "#t" || $1 == "#T" then LispTrue else LispFalse }
-	  | number		 { Number (read $1 ::Integer) }
+	  | number		 { Fixnum (read $1 ::Integer) }
 	  | character    { Char (head $1) }
       | string       { String $1 }
 	  | ident 		 { Symbol $1 }
