@@ -304,7 +304,7 @@ happyReduction_4 _  = notHappyAtAll
 happyReduce_5 = happySpecReduce_1  5 happyReduction_5
 happyReduction_5 (HappyTerminal (T p NumberT happy_var_1))
 	 =  HappyAbsSyn5
-		 (Number (read happy_var_1 ::Integer)
+		 (Fixnum (read happy_var_1 ::Integer)
 	)
 happyReduction_5 _  = notHappyAtAll 
 

@@ -191,15 +191,17 @@ readAll [String file] = loadFile file >>= return . List
 applyProc :: [Lisp] -> InterpM Lisp
 applyProc [] = throwError $ NumArgs 2 []
 applyProc val@[_] = throwError $ NumArgs 2 val
-applyProc (fn:xs) = case last xs of
-                        List args -> eval $ List $ fn : (init xs ++ args)
-                        notList -> throwError $ TypeMismatch "List" notList
+applyProc (fn:xs) =
+    case last xs of
+        List args -> eval $ List $ fn : (init xs ++ args)
+        notList   -> throwError $ TypeMismatch "List" notList
 
 
 -- 参见 r5rs 6.5
+-- TODO 环境参数
 evalProc :: [Lisp] -> InterpM Lisp
 evalProc [datum] = do
-  ret <- eval datum -- 默认是交互环境
+  ret <- eval datum
   case ret of  -- 处理顶层尾调用
     List (TailCall func:v) -> func v
     _                      -> return ret
@@ -319,13 +321,13 @@ readContents [String file] = liftM String $ liftIO $ readFile file
 numericBinop :: (Integer -> Integer -> Integer) -> [Lisp] -> ThrowsError Lisp
 numericBinop op [] = throwError $ NumArgs 2 []
 numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
-numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
-  --control $ \run -> catch (run . (\e -> mapM unpackNum params >>= return . Number . foldl1 op)) (run . (\e -> throwError $ Default "/: division by zero"))
-  --mapM unpackNum params >>= return . Number . foldl1 op
+numericBinop op params = mapM unpackNum params >>= return . Fixnum . foldl1 op
+  --control $ \run -> catch (run . (\e -> mapM unpackNum params >>= return . Fixnum . foldl1 op)) (run . (\e -> throwError $ Default "/: division by zero"))
+  --mapM unpackNum params >>= return . Fixnum . foldl1 op
 
 -- 与R5RS不同，我们的解释器暂时是一个弱类型的
 unpackNum :: Lisp -> ThrowsError Integer
-unpackNum (Number n) = return n
+unpackNum (Fixnum n) = return n
 unpackNum (String n) = let parsed = reads n in
                        if null parsed then throwError $ TypeMismatch "number" $ String n
                        else return $ fst $ parsed !! 0
@@ -370,7 +372,7 @@ strBoolBinop = boolBinop unpackStr
 
 unpackStr :: Lisp -> ThrowsError String
 unpackStr (String s) = return s
-unpackStr (Number s) = return $ show s
+unpackStr (Fixnum s) = return $ show s
 unpackStr LispTrue = return $ show LispTrue
 unpackStr LispFalse = return $ show LispFalse
 unpackStr notString = throwError $ TypeMismatch "string" notString
@@ -407,10 +409,10 @@ isString [String _] =return LispTrue
 isString [_] = return LispFalse
 isString args = throwError $ NumArgs 1 args
 
-isNumber :: [Lisp] -> ThrowsError Lisp
-isNumber [Number _] = return LispTrue
-isNumber [_] = return LispFalse
-isNumber args = throwError $ NumArgs 1 args
+isFixnum :: [Lisp] -> ThrowsError Lisp
+isFixnum [Fixnum _] = return LispTrue
+isFixnum [_] = return LispFalse
+isFixnum args = throwError $ NumArgs 1 args
 
 isList :: [Lisp] -> ThrowsError Lisp
 isList [List _] = return LispTrue
@@ -457,7 +459,7 @@ eqv [LispFalse, LispFalse] = return LispTrue
 eqv [LispTrue, LispFalse] = return LispFalse
 eqv [LispFalse, LispTrue] = return LispFalse
 eqv [Char c1, Char c2] = return $ if c1 == c2 then LispTrue else LispFalse
-eqv [Number arg1, Number arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
+eqv [Fixnum arg1, Fixnum arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 eqv [String arg1, String arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 eqv [Symbol arg1, Symbol arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 eqv [DotList xs x, DotList ys y] = eqv [List $ xs ++ [x], List $ ys ++ [y]]
@@ -477,7 +479,7 @@ equal [LispFalse, LispFalse] = return LispTrue
 equal [LispTrue, LispFalse] = return LispFalse
 equal [LispFalse, LispTrue] = return LispFalse
 equal [Char c1, Char c2] = return $ if c1 == c2 then LispTrue else LispFalse
-equal [Number arg1, Number arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
+equal [Fixnum arg1, Fixnum arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 equal [String arg1, String arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 equal [Symbol arg1, Symbol arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 equal [DotList xs x, DotList ys y] = equal [List $ xs ++ [x], List $ ys ++ [y]]
@@ -492,7 +494,7 @@ equal badArgList = throwError $ NumArgs 2 badArgList
 {-
 eqv' :: Lisp -> Lisp -> Bool
 eqv' (Bool arg1) (Bool arg2) = arg1 == arg2
-eqv' (Number arg1) (Number arg2) = arg1 == arg2
+eqv' (Fixnum arg1) (Fixnum arg2) = arg1 == arg2
 eqv' (String arg1) (String arg2) = arg1 == arg2
 eqv' (Symbol arg1) (Symbol arg2) = arg1 == arg2
 eqv' (DotList xs x) (DotList ys y) = eqv' (List $ xs ++ [x]) (List $ ys ++ [y])
@@ -502,8 +504,8 @@ eqv' _ _ = LispFalse
 -}
 
 makeString :: [Lisp] -> ThrowsError Lisp
-makeString [Number k] = makeString' (fromInteger k) '\0'
-makeString [Number k, Char c] = makeString' (fromInteger k) c
+makeString [Fixnum k] = makeString' (fromInteger k) '\0'
+makeString [Fixnum k, Char c] = makeString' (fromInteger k) c
 makeString _ = throwError $ Default "Argument Types Error"
 
 makeString' :: Int -> Char -> ThrowsError Lisp
@@ -518,12 +520,12 @@ stringFromCharList (Char arg : xs) = do
   return $ String $ [arg] ++ rest
 
 stringLength :: [Lisp] -> ThrowsError Lisp
-stringLength [String arg] = return $ Number $ toInteger $ length arg
+stringLength [String arg] = return $ Fixnum $ toInteger $ length arg
 stringLength [badArg] = throwError $ TypeMismatch "String" badArg
 stringLength badArgs = throwError $ NumArgs 1 badArgs
 
 stringRef :: [Lisp] -> ThrowsError Lisp
-stringRef [(String arg0), (Number arg1)] =
+stringRef [(String arg0), (Fixnum arg1)] =
     if arg1 < 0 || arg1 >= toInteger (length arg0)
     then throwError $ Default "String index out of range"
     else return $ Char $ arg0 !! fromInteger(arg1)
@@ -534,7 +536,7 @@ stringRef [(String arg0), (Number arg1)] =
 --
 
 sleepProc :: [Lisp] -> InterpM Lisp
-sleepProc [Number n] = liftIO $ threadDelay (fromInteger n * 1000000) >> return Void
+sleepProc [Fixnum n] = liftIO $ threadDelay (fromInteger n * 1000000) >> return Void
 sleepProc args = throwError $ NumArgs 1 args
 
 ---
@@ -585,7 +587,7 @@ primitives =
       ("symbol?", isSymbol),
       ("boolean?", isBoolean),
       ("pair?", isPair),
-      ("number?", isNumber),
+      ("number?", isFixnum),  -- FIXME
       ("string?", isString),
       ("list?", isList),
       ("char?", isChar),

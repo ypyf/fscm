@@ -14,4 +14,5 @@
 
 (display (foo)) ; prints "return from foo from inside proc"
 (newline)
-(display (bar)) ; prints "return from bar"
+(display (bar))
+(newline) ; prints "return from bar"

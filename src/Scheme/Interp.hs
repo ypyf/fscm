@@ -1,4 +1,4 @@
-module Scheme.Interp (defaultInterp, defaultEnv, run, runInterp, runREPL, runOnce) where
+module Scheme.Interp (defaultInterp, defaultEnv, runInterp, runREPL, runOnce) where
 
 import Scheme.Types
 import Scheme.Primitives
@@ -69,8 +69,9 @@ runInterp env interp = do
   v <- runErrorT $ runReaderT (runContT interp return) (SC env)
   case v of
     Left e -> putStrLn $ show e
-    Right result -> putStrLn $ show result
+    Right result -> (putStrLn $ show result) >> hFlush stdout
 
+{-
 run :: IO ()
 run = do
   r <- defaultEnv
@@ -79,9 +80,9 @@ run = do
     Left e -> putStrLn $ show e
     Right result -> putStrLn $ show result
   where
-    f (Number a) = return $ Number $ a + 1
+    f (Fixnum a) = return $ Fixnum $ a + 1
     f val = return val
-
+-}
 
 --evalString :: String -> InterpM Lisp
 --evalString s = readLisp s >>= evalProc

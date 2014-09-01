@@ -32,7 +32,7 @@ data Lisp = Nil
           | Void  -- 有副作用的函数返回的未定义值
           | EOF
           | Symbol !String
-          | Number !Integer
+          | Fixnum !Integer
           | String !String
           | Char !Char
           | LispTrue
@@ -82,7 +82,7 @@ showVal (Char '\x0a') = "#\\newline"
 showVal (Char c) = "#\\" ++ [c]
 showVal (String s) = show s
 showVal (Symbol a) = a
-showVal (Number n) = show n
+showVal (Fixnum n) = show n
 showVal LispTrue = "#t"
 showVal LispFalse = "#f"
 showVal (List vals) = "(" ++ unwordsList vals ++ ")"
@@ -95,7 +95,7 @@ showVal x = "#<Lisp Type>"  -- debug only
 -- eqv' :: Lisp -> Lisp -> Bool
 -- eqv' Nil Nil = LispTrue
 -- eqv' (Bool arg1) (Bool arg2) = arg1 == arg2
--- eqv' (Number arg1) (Number arg2) = arg1 == arg2
+-- eqv' (Fixnum arg1) (Fixnum arg2) = arg1 == arg2
 -- eqv' (String arg1) (String arg2) = arg1 == arg2
 -- eqv' (Symbol arg1) (Symbol arg2) = arg1 == arg2
 -- eqv' (DotList xs x) (DotList ys y) = eqv' (List $ xs ++ [x]) (List $ ys ++ [y])
