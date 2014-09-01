@@ -20,7 +20,7 @@ type ParseError = Either String
 
 -- terminal
 %token
-eof         { T p EOFT $$ }
+eof             { T p EOFT $$ }
 boolean 	{ T p BoolT $$ }
 character 	{ T p CharT $$ }
 string 		{ T p StringT $$ }
@@ -43,12 +43,12 @@ Lisp : {- empty -} { [] }
 
 Datum : eof          { EOF }
       | boolean      { if $1 == "#t" || $1 == "#T" then LispTrue else LispFalse }
-	  | number		 { Fixnum (read $1 ::Integer) }
-	  | character    { Char (head $1) }
+      | number       { Fixnum (read $1 ::Integer) }
+      | character    { Char (head $1) }
       | string       { String $1 }
-	  | ident 		 { Symbol $1 }
-	  | List		 { $1 }
-	  | Vector		 { $1 }
+      | ident        { Symbol $1 }
+      | List         { $1 }
+      | Vector       { $1 }
 
 Lisp1 : Datum { [$1] }
       | Datum Lisp1 { $1 : $2 }
@@ -101,11 +101,14 @@ parseError (T p tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn p ++ ": " +
 parseError _                   = Left "syntax error"
 
 readLisp :: String -> InterpM [Lisp]
-readLisp input = case scanner input of
-                   Left x -> throwError $ ParseError x
-                   Right toks -> case parseLisp toks of
-				   Left x -> throwError $ ParseError x
-	                           Right x -> return x
+readLisp input =
+    case scanner input of
+        Left x -> throwError $ ParseError x
+        Right toks ->
+            case parseLisp toks of
+                Left x -> throwError $ ParseError x
+                Right x -> return x
+
 {- main = do
   s <- getContents
   case scanner s of
