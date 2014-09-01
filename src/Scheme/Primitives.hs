@@ -531,7 +531,7 @@ stringRef [(String arg0), (Fixnum arg1)] =
     else return $ Char $ arg0 !! fromInteger(arg1)
 
 
----
+--
 -- 进程控制
 --
 
@@ -539,9 +539,6 @@ sleepProc :: [Lisp] -> InterpM Lisp
 sleepProc [Fixnum n] = liftIO $ threadDelay (fromInteger n * 1000000) >> return Void
 sleepProc args = throwError $ NumArgs 1 args
 
----
---
---
 
 --- 错误处理
 errorProc :: [Lisp] -> InterpM Lisp
