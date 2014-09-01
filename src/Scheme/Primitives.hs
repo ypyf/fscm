@@ -179,9 +179,12 @@ loadPlug args = throwError $ NumArgs 1 args
 loadFile :: String -> InterpM [Lisp]
 loadFile file = (liftIO $ readFile file) >>= readLisp
 
+--readLines n f = withFile f ReadMode $ replicateM n . hGetLine
+
 -- 载入源文件并转换成Lisp并求值
 loadProc :: [Lisp] -> InterpM Lisp
-loadProc [String file] = loadFile file >>= mapM_ eval >> return Void
+loadProc [String file] = do
+    loadFile file >>= mapM_ eval >> return Void
 loadProc args = throwError $ NumArgs 1 args
 
 -- 调用load并把结果转换成单一的LispVal

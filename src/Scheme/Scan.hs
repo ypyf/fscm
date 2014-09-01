@@ -323,17 +323,17 @@ alex_accept = listArray (0::Int,68) [AlexAccNone,AlexAccNone,AlexAccNone,AlexAcc
 {-# LINE 127 "Scheme/Scan.x" #-}
 
 data Token = T AlexPosn Tkn String
-	deriving (Show)
-	
+    deriving (Show)
+
 data Tkn = EOFT
          | IdentT
-		 | BoolT
-		 | NumberT
-		 | CharT
-		 | StringT
-		 | PunctuT 			-- Punctuation
-		 | VectorT 			-- #(
-		 | SplicingT       	-- ,@
+         | BoolT
+         | NumberT
+         | CharT
+         | StringT
+         | PunctuT 			-- Punctuation
+         | VectorT 			-- #(
+         | SplicingT       	-- ,@
     deriving (Eq,Show)
 
 mkToken :: Tkn -> AlexInput -> Int -> Alex Token
@@ -355,54 +355,57 @@ char (p, _, _, str) len = return $ T p CharT (extract len str)
 				_ -> x
 
 string (p, _, _, str) len = return $ T p StringT (extractString len str)
-	
--- extract string and remove double quotes)
+
+-- extract string and remove double quotes
 extractString len str = escape $ take (len-2) (tail str)
-	where 
-		escape [] = []
-		-- 转义字符
-		escape str@('\\':'a':xs) = '\a' : escape xs
-		escape str@('\\':'b':xs) = '\b' : escape xs
-		escape str@('\\':'f':xs) = '\f' : escape xs
-		escape str@('\\':'n':xs) = '\n' : escape xs
-		escape str@('\\':'r':xs) = '\r' : escape xs
-		escape str@('\\':'t':xs) = '\t' : escape xs
-		escape str@('\\':'v':xs) = '\v' : escape xs
-		--escape str@('\\':'X':xs) = -- 16进制
-		--escape str@('\\':'x':xs) = -- 16进制
-		--escape str@('\\':x:xs) = -- 8进制
-		--escape str@('\\':'U':xs) = -- 16进制Unicode
-		--escape str@('\\':'u':xs) = -- 16进制Unicode
-		escape str@(x:xs) = x : escape xs
-		
+  where
+    escape [] = []
+    -- 转义字符
+    escape str@('\\':'a':xs) = '\a' : escape xs
+    escape str@('\\':'b':xs) = '\b' : escape xs
+    escape str@('\\':'f':xs) = '\f' : escape xs
+    escape str@('\\':'n':xs) = '\n' : escape xs
+    escape str@('\\':'r':xs) = '\r' : escape xs
+    escape str@('\\':'t':xs) = '\t' : escape xs
+    escape str@('\\':'v':xs) = '\v' : escape xs
+    --escape str@('\\':'X':xs) = -- 16进制
+    --escape str@('\\':'x':xs) = -- 16进制
+    --escape str@('\\':x:xs) = -- 8进制
+    --escape str@('\\':'U':xs) = -- 16进制Unicode
+    --escape str@('\\':'u':xs) = -- 16进制Unicode
+    escape str@(x:xs) = x : escape xs
+
 ident (p, _, _, str) len = return $ T p IdentT (extract len str)
-	where extract = (map Char.toLower .) . take
-	
+  where extract = (map Char.toLower .) . take
+
 alexEOF :: Alex Token
 alexEOF = return $ T undefined EOFT ""
 
 badToken :: AlexInput -> Int -> Alex Token
-badToken (_, _, _, input) len = lexError $ "illegal character " ++ show (head input)
+badToken (_, _, _, input) len = alexError $ "illegal character " ++ show (head input)
 
-lexError s = do
+{-
+alexError s = do
   (p, _, _, input) <- alexGetInput
   alexError (showPosn p ++ ": " ++ s ++
 		   (if (not (null input))
 		     then " before " ++ show (head input)
-		     else " at end of file"))			 
-			 
+		     else " at end of file"))
+-}
+
 showPosn (AlexPn _ line col) = show line ++ ':': show col
 
 scanner :: String -> Either String [Token]
 scanner str = runAlex str loop
   where
-	loop = do
-	  tok <- alexMonadScan
-	  case tok of
-		T _ EOFT _ -> return []
-		t -> do
-			 tks <- loop
-			 return $ t : tks
+    loop :: Alex [Token] -- AlexState -> Either String (AlexState, [Token])
+    loop = do
+        tok <- alexMonadScan
+        case tok of
+            T _ EOFT _ -> return []
+            t -> do
+                tks <- loop
+                return $ t : tks
 
 alex_action_0 =  skip 
 alex_action_1 =  mkToken BoolT 
