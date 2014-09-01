@@ -69,7 +69,7 @@ runInterp env interp = do
   v <- runErrorT $ runReaderT (runContT interp return) (SC env)
   case v of
     Left e -> putStrLn $ show e
-    Right result -> (putStrLn $ show result) >> hFlush stdout
+    Right result -> flushStr $ show result
 
 {-
 run :: IO ()
@@ -89,7 +89,6 @@ run = do
 
 interp :: InterpM Lisp
 interp = do
-  loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
   x <- readProc [] `catchError` readerErrorHandler
   r <- evalProc [x] `catchError` errorHandler
   case r of
