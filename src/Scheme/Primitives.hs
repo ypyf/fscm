@@ -17,6 +17,7 @@ import qualified System.Console.Readline as RL
 import Data.Time
 import Data.IORef
 import qualified Data.Map.Strict as M
+import Data.Foldable (foldlM)
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Error
@@ -524,6 +525,16 @@ stringLength [String arg] = return $ Fixnum $ toInteger $ length arg
 stringLength [badArg] = throwError $ TypeMismatch "String" badArg
 stringLength badArgs = throwError $ NumArgs 1 badArgs
 
+stringAppend :: [Lisp] -> ThrowsError Lisp
+stringAppend args = do
+    r <- foldlM append "" args
+    return $ String r
+  where
+    append :: String -> Lisp -> ThrowsError String
+    append a (String b) = return $ a ++ b
+    append a b = throwError $ TypeMismatch "string" b
+
+
 stringRef :: [Lisp] -> ThrowsError Lisp
 stringRef [(String arg0), (Fixnum arg1)] =
     if arg1 < 0 || arg1 >= toInteger (length arg0)
@@ -595,6 +606,7 @@ primitives =
       ("string", stringFromCharList),
       ("make-string", makeString),
       ("string-length", stringLength),
+      ("string-append", stringAppend),
       ("string-ref", stringRef),
 
       -- 列表操作
