@@ -6,3 +6,7 @@ cabal-dev
 *.hi
 *.chi
 *.chs.h
+
+# auto-generated file
+src/Scheme/Scan.hs
+src/Scheme/Parser.hs
