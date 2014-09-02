@@ -35,7 +35,7 @@ eval (List (Symbol "lambda":List s:body)) = do
     else do
       v' <- mapM (liftIO . newIORef) v
       let locals = M.fromList $ zip params v'
-      makeClosure locals upvalues body
+      mkClosure locals upvalues body
 
 -- 可变参数
 -- (lambda x ...)
@@ -45,7 +45,7 @@ eval (List (Symbol "lambda":(Symbol s):body)) = do
   return $ Lambda $ \v -> do
     v' <- liftIO $ newIORef (List v)
     let locals = M.fromList [(s, v')]
-    makeClosure locals upvalues body
+    mkClosure locals upvalues body
 
 
 -- 可变参数
@@ -61,7 +61,7 @@ eval (List (Symbol "lambda":dl@(DotList s0 s1):body)) = do
         v0 <- liftIO $ sequence $ map newIORef v
         v1 <- liftIO $ newIORef (List $ drop nargs v)
         let locals = M.fromList $ (zip params v0) ++ [(vararg, v1)]
-        makeClosure locals upvalues body
+        mkClosure locals upvalues body
 
 
 -- apply
@@ -75,11 +75,11 @@ eval (List (x:xs)) = eval x >>= \fn -> apply (fn:xs)
 eval val = return val
 --eval form = throwError $ BadSpecialForm "unrecognized special form" form
 
-makeClosure :: M.Map String (IORef Lisp)
+mkClosure :: M.Map String (IORef Lisp)
             -> Context
             -> [Lisp]
             -> InterpM Lisp
-makeClosure locals upvalues body = do
+mkClosure locals upvalues body = do
   --let keys = M.keys upvalues
   --trace (show keys) $ do
   ret <- local f $ closure body
@@ -123,6 +123,11 @@ apply (x:xs) = do
   mapM eval xs
   throwError $ Default $ "expected procedure, given: " ++ show x ++ "; arguments were: " ++ unwordsList xs
 
+
 apply_tail :: [Lisp] -> InterpM Lisp
+--apply_tail (Lambda func:xs) = do
+--    rx <- mapM eval xs
+--    callCC $ \k -> func rx >>= k   --
 apply_tail (Lambda func:xs) = mapM eval xs >>= \v -> return $ List $ TailCall func : v
 apply_tail exps = apply exps
+
