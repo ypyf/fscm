@@ -1,4 +1,3 @@
-fscm
-=====
+#FSCM
 
-A Scheme(R5RS) interpreter implementation in Haskell
+A Scheme (programming language) interpreter
