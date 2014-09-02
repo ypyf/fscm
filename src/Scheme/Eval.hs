@@ -69,7 +69,7 @@ eval (List (Symbol "lambda":dl@(DotList s0 s1):body)) = do
 -- 语法关键词（特殊形式）不对参数求值
 eval form@(DotList s0 s1) = throwError $ Default $ "illegal use of `.' in: " ++ show form
 
--- apply
+-- function apply
 eval (List []) = throwError $ Default "missing procedure expression."
 eval (List (x:xs)) = eval x >>= \fn -> apply (fn:xs)
 eval val = return val
