@@ -3,10 +3,7 @@ module Scheme.Interp (defaultInterp, defaultEnv, runInterp, runREPL, runOnce) wh
 import Scheme.Types
 import Scheme.Primitives
 
---import System.Posix.Signals
---import Control.Concurrent (forkFinally, )
 import System.IO
-import System.IO.Unsafe (unsafePerformIO)
 import Data.IORef
 import Control.Exception.Base
 import Control.Monad
