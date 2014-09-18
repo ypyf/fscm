@@ -285,7 +285,7 @@ makePort :: IOMode -> [Lisp] -> InterpM Lisp
 makePort mode [String file] = liftM HPort $ liftIO $ openFile file mode
 
 closePort :: [Lisp] -> InterpM Lisp
-closePort [HPort port] = liftIO $ hClose port >> (return LispTrue)
+closePort [HPort port] = liftIO $ hClose port >> return LispTrue
 closePort _ = return LispFalse
 
 -- read函数
