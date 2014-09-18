@@ -163,6 +163,7 @@ keywords =
 -- 内置过程 Procedures
 --
 
+
 quitProc :: [Lisp] -> InterpM Lisp
 quitProc _ = liftIO $ exitWith ExitSuccess
 
@@ -321,7 +322,8 @@ readContents [String file] = liftM String $ liftIO $ readFile file
 -- FIXME
 -- (+) => 0
 -- (*) => 1
--- (- n) => -n
+-- (+ 1) => 1
+-- (- 1) => -1
 numericBinop :: (Integer -> Integer -> Integer) -> [Lisp] -> ThrowsError Lisp
 numericBinop op [] = throwError $ NumArgs 2 []
 numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
@@ -568,12 +570,38 @@ idiv :: Integer -> Integer -> InterpM Lisp
 idiv a 0 = throwError ZeroDivision
 idiv a b = return Void
 
+type Opcode = Int
+type DispatchFunc = Opcode -> [Lisp] -> ThrowsError Lisp
+
+opIAdd = 0
+
+-- 运算符映射表
+opcodes :: [(String, DispatchFunc, Int, Int, Opcode)]
+opcodes =
+    [
+      ("+", numericOp, 0, 0xfff, opIAdd)
+    ]
+
+numericOp :: DispatchFunc
+numericOp opcode args = do
+    let (name, dis, min, max, op) = opcodes !! opcode
+        arity = length args
+    -- FIXME 定义新的错误类型，表示超出最大最小arity的情况
+    -- 检查参数数量
+    if arity < min then throwError $ NumArgs min args
+    else if arity >= max then throwError $ NumArgs max args
+    else numericOp' opcode args
+
+numericOp' :: DispatchFunc
+numericOp' opIAdd [] = return $ Fixnum 0
+numericOp' opIAdd args = mapM unpackNum args >>= return . Fixnum . foldl1 (+)
+
 -- 内置的纯函数查询表
 primitives :: [(String, [Lisp] -> ThrowsError Lisp)]
 primitives =
     [
       -- 数值算符
-      ("+", numericBinop (+)),
+      ("+", numericOp opIAdd),
       ("-", numericBinop (-)),
       ("*", numericBinop (*)),
       ("/", numericBinop div),

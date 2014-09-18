@@ -23,7 +23,7 @@ defaultEnv = do
   let env = keywordsBindings ++ primitiveBindings ++ primitiveIoBindings
   lst <- mapM (\(k, v) -> newIORef v >>= \v -> return (k, v)) env
   return $ M.fromList lst
-  
+
 --pio_interaction_environment [] = return $ Environment builtins
 
 -- 绑定内置函数(常量)到环境
