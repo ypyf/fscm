@@ -258,19 +258,20 @@ currentOutputPort args = throwError $ NumArgs 0 args
 
 -- r5rs 6.6.3
 display :: [Lisp] -> InterpM Lisp
+-- TODO 端口没有指定时，应该获取当前端口
+display [val] = display [val, HPort stdout]
+display [val, HPort port] = display' val port >> liftIO (hFlush port) >> return Void
+display args = callCC $ \k -> throwError $ RTE "1 arg expected." k
 
+display' :: Lisp -> Handle -> InterpM ()
 -- r5rs:6.6.3 字符串字面量不显示引号且不显示转义符号
-display [String s] = liftIO $ putStr s >> return Void
-display [String s, HPort port] = liftIO $ hPutStr port s >> return Void
+display' (String s) port = liftIO $ hPutStr port s
 
 -- r5rs:6.6.3 字符用write-char显示
-display [Char c] = liftIO $ putChar c >> return Void
-display [Char c, HPort port] = liftIO $ hPutChar port c >> return Void
+display' (Char c) port = liftIO $ hPutChar port c
 
-display [x] = liftIO $ putStr (show x) >> return Void
-display [x, HPort port] = liftIO $ hPutStr port (show x) >> return Void
+display' val port = liftIO $ hPutStr port $ show val
 
-display args = callCC $ \k -> throwError $ RTE "1 arg expected." k
 
 -- 输出人类可读字符(不是外部表示)
 writeChar :: [Lisp] -> InterpM Lisp
