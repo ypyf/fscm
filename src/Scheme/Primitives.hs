@@ -264,21 +264,16 @@ display [val, HPort port] = display' val port >> liftIO (hFlush port) >> return 
 display args = callCC $ \k -> throwError $ RTE "1 arg expected." k
 
 display' :: Lisp -> Handle -> InterpM ()
--- r5rs:6.6.3 字符串字面量不显示引号且不显示转义符号
 display' (String s) port = liftIO $ hPutStr port s
-
--- r5rs:6.6.3 字符用write-char显示
 display' (Char c) port = liftIO $ hPutChar port c
-
 display' val port = liftIO $ hPutStr port $ show val
 
-
--- 输出人类可读字符(不是外部表示)
 writeChar :: [Lisp] -> InterpM Lisp
 writeChar [] = throwError $ NumArgs 1 []
-writeChar [Char c] = liftIO $ putChar c >> return Void
-writeChar [Char c, HPort port] = liftIO $ hPutChar port c >> return Void
+writeChar val@[Char _] = display val
+writeChar val@[Char _, HPort _] = display val
 writeChar [notChar] = throwError $ TypeMismatch "char" notChar
+
 
 -- makePort是对haskell中的openFile函数的包装
 makePort :: IOMode -> [Lisp] -> InterpM Lisp
