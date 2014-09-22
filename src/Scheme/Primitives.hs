@@ -142,8 +142,13 @@ letStarExp (List bindings:body) = do
 -- FIXME 顶层begin中的define应该绑定在顶层环境
 beginExp :: [Lisp] -> InterpM Lisp
 beginExp [] = return Void
-beginExp lst =  eval_tail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
+beginExp lst = eval_tail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
 
+
+defineModule :: [Lisp] -> InterpM Lisp
+defineModule [List [file]] = return Void
+
+--defineModule (List [dir file]) = 
 keywords :: [(String, [Lisp] -> InterpM Lisp)]
 keywords =
     [
@@ -155,7 +160,8 @@ keywords =
      ("define", defineVar),
      ("set!", setVar),
      ("time", time),
-     ("bench", bench)
+     ("bench", bench),
+     ("define-module", defineModule)
     ]
 
 
