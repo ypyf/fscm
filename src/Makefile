@@ -16,6 +16,11 @@ Scheme/Scan.hs: Scheme/Scan.x
 Scheme/Parser.hs: Scheme/Parser.y
 	happy --strict Scheme/Parser.y
 
+prof: fscm-prof
+
+fscm-prof: $(SRC)
+	ghc --make Main.hs -prof -auto-all -fwarn-missing-signatures -optc-Os -O2 -o $(EXE)
+
 clean:
 	rm -f $(EXE)
 	rm -f *.o *.hi
