@@ -2,6 +2,18 @@
 
 A Scheme (programming language) interpreter
 
+
+#Build
+    cd fscm/src
+    make
+
+#Run
+    ./fscm.exe
+
+#Install via Cabal package
+    cd fscm
+    cabal install
+
 #TODO
 
 * Number tower
