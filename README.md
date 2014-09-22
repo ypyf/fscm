@@ -3,11 +3,9 @@
 A Scheme (programming language) interpreter
 
 
-#Build
+#Build & Run
     cd fscm/src
     make
-
-#Run
     ./fscm.exe
 
 #Install via Cabal package
