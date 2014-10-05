@@ -8,7 +8,7 @@ A Scheme (programming language) interpreter
     make
     ./fscm.exe
 
-##Install via Cabal package
+##Installing via Cabal package
     cd fscm
     cabal install
 
