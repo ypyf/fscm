@@ -53,9 +53,9 @@ Datum : eof          { EOF }
 Lisp1 : Datum { [$1] }
       | Datum Lisp1 { $1 : $2 }
 
--- æ³¨æ„è™½ç„¶æ ¹æ®DotListç±»åž‹çš„å®šä¹‰å¯ä»¥è¡¨ç¤ºä¸¥æ ¼è¡¨
--- ä½†Parserä¿è¯è¿”å›žçš„DotListä¸æ˜¯Listï¼ˆä¸¥æ ¼è¡¨ï¼‰ï¼Œå³å®ƒçš„cdréƒ¨åˆ†ä¸æ˜¯List
-List : '(' Lisp1 '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- æœ‰å¿…è¦ä¼˜å…ˆè§£æžç‚¹å¯¹å—??
+-- ×¢ÒâËäÈ»¸ù¾ÝDotListÀàÐÍµÄ¶¨Òå¿ÉÒÔ±íÊ¾ÑÏ¸ñ±í
+-- µ«Parser±£Ö¤·µ»ØµÄDotList²»ÊÇList£¨ÑÏ¸ñ±í£©£¬¼´ËüµÄcdr²¿·Ö²»ÊÇList
+List : '(' Lisp1 '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- ÓÐ±ØÒªÓÅÏÈ½âÎöµã¶ÔÂð??
   -- | '(' Lisp1 '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
      | '(' '.' Datum ')' { $3 }
   -- | '(' Lisp1 '.' error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
@@ -72,16 +72,16 @@ List : '(' Lisp1 '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) 
 Vector : "#(" Lisp ')' { Vector $2 }
        | "#(" Lisp error {% Left $ showPosn $1 ++ " error: expected a ')' to close '#('" }
 
--- æ³¨æ„:æ²¡æœ‰ç²¾ç¡®æ€§å‰ç¼€çš„æ•°åªè¦æœ‰å‡ºçŽ°è‡³å°‘ä¸€ä¸ª#å°±æ˜¯éžç²¾ç¡®æ•°
+-- ×¢Òâ:Ã»ÓÐ¾«È·ÐÔÇ°×ºµÄÊýÖ»ÒªÓÐ³öÏÖÖÁÉÙÒ»¸ö#¾ÍÊÇ·Ç¾«È·Êý
 {-
 Number : Int10	{ $1 }
 	   | Frac10 { $1 }
 
--- æœ‰ç¬¦å·10è¿›åˆ¶æ•´æ•°
+-- ÓÐ·ûºÅ10½øÖÆÕûÊý
 SInt10 : uint10					{ $1 }
        | '+' uint10				{ $2 }
        | '-' uint10				{ '-':$2 }
--- ç²¾ç¡®æ•°
+-- ¾«È·Êý
 Int10 : SInt10					{ VInt (read $1 ::Integer) }
 	  | radix10 SInt10			{ VInt (read $2 ::Integer) }
 	  | prefix10_e SInt10 ManyS	{ VInt (read $2 * 10^$3) }
@@ -95,7 +95,7 @@ Frac10 : SInt10 '/' uint10			{ VRatio (read $1 % read $3) }
 -}
 
 {
--- parseErrorä¸Žtop level parseræœ‰ç€ç›¸åŒçš„ç­¾å
+-- parseErrorÓëtop level parserÓÐ×ÅÏàÍ¬µÄÇ©Ãû
 parseError :: [Token] -> ParseError a
 parseError (T p tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn p ++ ": " ++ lexeme
 parseError _                   = Left "syntax error"

@@ -13,7 +13,6 @@ import Debug.Trace
 import System.Exit
 import System.Mem
 import System.IO
-import qualified System.Console.Readline as RL
 import Data.Time
 import Data.IORef
 import qualified Data.Map.Strict as M
@@ -24,7 +23,6 @@ import Control.Monad.Error
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Cont
 import Control.Concurrent (threadDelay)
-import qualified System.Plugins.Load as PL
 
 
 --
@@ -173,14 +171,6 @@ keywords =
 quitProc :: [Lisp] -> InterpM Lisp
 quitProc _ = liftIO $ exitWith ExitSuccess
 
--- 载入Hs目标模块(*.o)
-loadPlug :: [Lisp] -> InterpM Lisp
-loadPlug [String file, String name] = do
-    mv <- liftIO $ PL.load file ["."] [] name
-    case mv of
-        PL.LoadFailure errs -> throwError $ Default $ show errs
-        PL.LoadSuccess _ v  -> return $ HFunc (v::[Lisp] -> InterpM Lisp)
-loadPlug args = throwError $ NumArgs 1 args
 
 -- 载入lisp源文件
 loadFile :: String -> InterpM [Lisp]
@@ -294,17 +284,14 @@ closePort _ = return LispFalse
 -- read函数将Datum解析为内部对象(Lisp)
 readProc :: [Lisp] -> InterpM Lisp
 readProc [] = do --readProc [HPort stdin] -- 缺省端口
-    line <- liftIO $ RL.readline "> "
-    case line of
-        Nothing -> return Void -- EOF
-        Just s  ->
-            if s /= [] then do
-                liftIO $ RL.addHistory s
-                r <- readLisp s
-                case r of
-                    [] -> return Void
-                    x:xs -> return x
-            else return Void
+    liftIO $ putStr "> " >> hFlush stdout
+    s <- liftIO $ getLine
+    if s /= [] then do
+        r <- readLisp s
+        case r of
+            [] -> return Void
+            x:xs -> return x
+    else return Void
 readProc [HPort port] = do
   s <- liftIO $ hGetLine port
   r <- readLisp s
@@ -653,7 +640,6 @@ primitivesIo :: [(String, [Lisp] -> InterpM Lisp)]
 primitivesIo =
     [
      ("load", loadProc),
-     ("load-hs-proc", loadPlug),
      ("eval", evalProc),
      ("apply", applyProc),
      ("call-with-current-continuation", callcc),
