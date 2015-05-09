@@ -68,6 +68,22 @@ runInterp env interp = do
     Left e -> putStrLn $ show e
     Right result -> flushStr $ show result
 
+-- TODO 使用Scheme本身去写REPL
+defaultInterp :: InterpM Lisp
+defaultInterp = do
+  loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
+  forever $ (liftIO $ prompt "> ") >> interp
+
+interp :: InterpM Lisp
+interp = do
+  x <- readProc [] `catchError` readerErrorHandler
+  r <- evalProc [x] `catchError` errorHandler
+  case r of
+    Void -> return Void
+    _    -> do
+      liftIO $ putStrLn $ show r
+      return Void
+
 {-
 run :: IO ()
 run = do
@@ -84,21 +100,6 @@ run = do
 --evalString :: String -> InterpM Lisp
 --evalString s = readLisp s >>= evalProc
 
-interp :: InterpM Lisp
-interp = do
-  x <- readProc [] `catchError` readerErrorHandler
-  r <- evalProc [x] `catchError` errorHandler
-  case r of
-    Void -> return Void
-    _    -> do
-      liftIO $ putStrLn $ show r
-      return Void
-
--- TODO 使用Scheme本身去写REPL
-defaultInterp :: InterpM Lisp
-defaultInterp = do
-  loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
-  forever interp
 
 errorHandler :: LispError -> InterpM Lisp
 errorHandler e = (liftIO $ putStrLn $ show e) >> return Void
