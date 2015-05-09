@@ -280,24 +280,23 @@ closePort :: [Lisp] -> InterpM Lisp
 closePort [HPort port] = liftIO $ hClose port >> return LispTrue
 closePort _ = return LispFalse
 
--- read函数
--- read函数将Datum解析为内部对象(Lisp)
-readProc :: [Lisp] -> InterpM Lisp
-readProc [] = do --readProc [HPort stdin] -- 缺省端口
-    liftIO $ putStr "> " >> hFlush stdout
-    s <- liftIO $ getLine
-    if s /= [] then do
-        r <- readLisp s
-        case r of
-            [] -> return Void
-            x:xs -> return x
-    else return Void
-readProc [HPort port] = do
-  s <- liftIO $ hGetLine port
-  r <- readLisp s
+-- from Clojure :-)
+readString :: [Lisp] -> InterpM Lisp
+readString [] = throwError $ NumArgs 1 []
+readString [String str] = do
+  r <- readLisp str
   case r of
     [] -> return Void
     x:xs -> return x -- TODO rest部分应该缓存，下一次继续读
+
+-- read函数
+-- read函数将Datum解析为内部对象(Lisp)
+readProc :: [Lisp] -> InterpM Lisp
+readProc [] = readProc [HPort stdin] -- 缺省端口
+readProc [HPort port] = do
+  s <- liftIO $ hGetLine port
+  r <- readLisp s
+  readString [String s]
 
 -- 将LispVal转换为字符串后写入端口
 writeProc :: [Lisp] -> InterpM Lisp
@@ -654,6 +653,7 @@ primitivesIo =
      ("current-input-port", currentInputPort),
      ("current-output-port", currentOutputPort),
      ("read", readProc),
+     ("read-string", readString),
      ("write", writeProc),
      ("read-contents", readContents),
      ("read-all", readAll),

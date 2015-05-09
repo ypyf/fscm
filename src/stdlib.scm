@@ -6,7 +6,7 @@
 (define (null? obj) (if (eqv? obj '()) #t #f))
 
 (define (list . objs) objs)
-; another form to define `list'
+; alternative `list'
 (define list (lambda x x))
 
 (define (id obj) obj)

@@ -119,7 +119,6 @@ instance MonadError e m => MonadError e (ContT r m) where
     m `catchError` h = ContT $ \c -> runContT m c `catchError` \e -> runContT (h e) c
 
 -- 解释器单子
-
 type InterpM = ContT Lisp (ReaderT Context (ErrorT LispError IO))
 
 
