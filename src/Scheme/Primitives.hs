@@ -13,7 +13,6 @@ import Debug.Trace
 import System.Exit
 import System.Mem
 import System.IO
-import qualified System.Console.Readline as RL
 import Data.Time
 import Data.IORef
 import qualified Data.Map.Strict as M
@@ -24,8 +23,9 @@ import Control.Monad.Error
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Cont
 import Control.Concurrent (threadDelay)
-import qualified System.Plugins.Load as PL
 
+import qualified System.Plugins.Load as PL
+import qualified System.Console.Readline as RL
 
 --
 -- 语法关键字
