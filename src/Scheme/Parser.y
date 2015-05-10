@@ -7,8 +7,10 @@ import Data.Char
 import Scheme.Scan
 import Scheme.Types
 
-type ParseError = Either String
+
 }
+
+
 
 -- Parser
 %partial parseLisp Lisp
@@ -101,6 +103,9 @@ Frac10 : SInt10 '/' uint10			{ VRatio (read $1 % read $3) }
 -}
 
 {
+
+type ParseError = Either String
+
 -- parseError与top level parser有着相同的签名
 parseError :: [Token] -> ParseError a
 parseError (T p tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn p ++ ": " ++ lexeme
