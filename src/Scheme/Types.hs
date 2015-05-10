@@ -25,7 +25,7 @@ unwordsList = unwords . map show
 
 type ThrowsError = Either LispError
 
-type Future = Lisp -- 续体的返回类型，但在对象语言中续体从不返回！
+type Future = Lisp -- 续体的返回类型，但在对象语言中续体从不返回
 
 -- 表达式求值的结果类型
 data Lisp = Nil
@@ -79,6 +79,10 @@ showVal (Syntax _) = "#<special-form>"
 
 showVal (Char '\x20') = "#\\space"
 showVal (Char '\x0a') = "#\\newline"
+--showVal (Char '\x08') = "#\\backspace"
+--showVal (Char '\x09') = "#\\tab"
+--showVal (Char '\x0c') = "#\\formfeed"
+--showVal (Char '\x0d') = "#\\return"
 showVal (Char c) = "#\\" ++ [c]
 showVal (String s) = show s
 showVal (Symbol a) = a

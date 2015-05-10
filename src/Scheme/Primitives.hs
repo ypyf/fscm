@@ -37,7 +37,7 @@ time (x:xs) = do
   stop <- liftIO $ getCurrentTime
   liftIO $ print $ diffUTCTime stop start
   return v
-time _ = throwError $ Default "define: bad syntax"
+time _ = throwError $ Default "time: bad syntax"
 
 bench :: [Lisp] -> InterpM Lisp
 bench _ = return Void
@@ -52,20 +52,18 @@ defineVar [Symbol name, expr] = do
   r <- ask
   case getValue name r of
     Nothing -> do
-      -- define类似于letrec，允许闭包的递归定义，所以先设定一个初始值
+      -- define类似于letrec，允许闭包的递归定义，所以先设定一个临时的初值
       -- 在修改后的环境中执行后续计算
-      -- 第一次定义变量
       tmp <- liftIO $ newIORef Void
-      callCC $ \k -> local (insert tmp) (def tmp >> k Void)
+      callCC $ \k -> local (insert tmp) (def tmp >>= k)
     -- 重定义变量
     Just x -> def x >> return Void
   where
     insert :: IORef Lisp -> Context -> Context
     insert v (SC r) = SC $ M.insert name v r
     insert v (TC locals upvalues r) = TC (insert v locals) upvalues r
-    -- 有的实现似乎可以定义为void
-    def :: IORef Lisp -> InterpM ()
-    def ref = eval expr >>= liftIO . writeIORef ref
+    def :: IORef Lisp -> InterpM Lisp
+    def ref = eval expr >>= liftIO . writeIORef ref >> return Void
 
 -- (define (name...) ...)
 defineVar (List (Symbol name:xs):body) =
