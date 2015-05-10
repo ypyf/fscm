@@ -73,6 +73,12 @@
 ;;            (cons (f (car lst)) (map f (cdr lst))))))
 (define (filter pred lst) (foldr (lambda (x y) (if (pred x) (cons x y) y)) '() lst))
 
+;; from Common Lisp
+(define list-cdr
+    (lambda (x)
+        (if (null? x)
+            '()
+            (cdr x))))
 
 (define (list-tail lst k)
   (if (zero? k)
