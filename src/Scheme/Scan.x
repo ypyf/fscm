@@ -118,7 +118,7 @@ scheme :-
 <0>   	@char          		{ char }
 <0>   	@string        		{ string }
 <0>		@ident 				{ ident }
-<0>		[\(\)\#\@\'\`\,\.] 	{ mkToken PunctuT }
+<0>		[\(\)\[\]\#\@\'\`\,\.] 	{ mkToken PunctuT }
 <0>    	"#("           		{ mkToken VectorT }
 <0>    	",@"           		{ mkToken SplicingT }
         .                       { badToken }
