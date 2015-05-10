@@ -29,6 +29,8 @@ number		{ T p NumberT $$ }
 '#' 		{ T $$ PunctuT "#" }
 '(' 		{ T $$ PunctuT "(" }
 ')' 		{ T $$ PunctuT ")" }
+'[' 		{ T $$ PunctuT "[" }
+']' 		{ T $$ PunctuT "]" }
 '.' 		{ T $$ PunctuT "." }
 '\'' 		{ T $$ PunctuT "'" } 		-- Quote
 '`' 		{ T $$ PunctuT "`" }  		-- Quasiquote
@@ -56,12 +58,16 @@ Lisp1 : Datum { [$1] }
 -- 注意虽然根据DotList类型的定义可以表示严格表
 -- 但Parser保证返回的DotList不是List（严格表），即它的cdr部分不是List
 List : '(' Lisp1 '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
+     | '[' Lisp1 '.' Datum ']' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
   -- | '(' Lisp1 '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
      | '(' '.' Datum ')' { $3 }
+     | '[' '.' Datum ']' { $3 }
   -- | '(' Lisp1 '.' error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
   -- | '(' '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
      | '(' Lisp1 ')' { List $2 }
      | '(' ')'  { List [] }
+     | '[' Lisp1 ']' { List $2 }
+     | '[' ']'  { List [] }
   -- | '(' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
   -- | '(' Lisp1 error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
      | '\'' Datum { List [Symbol "quote", $2] }
