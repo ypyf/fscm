@@ -37,14 +37,6 @@ primitiveIoBindings = [(k, v) | (k, f) <- primitivesIo, let v = IOFunc f]
 syntaxBindings :: [(String, Lisp)]
 syntaxBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
 
--- runOnce args = do
---   -- 初始化环境并将命令行参数绑定到环境中
---   env <- primitiveBindings >>= flip bindVars [("args", List $ map String $ drop 1 args)]
---   -- 从命令行载入文件
---   (runIOThrows $ liftM show $ eval env (List [Symbol "load", String (args !! 0)]))
---   >>= hPutStrLn stderr
-
-{- REPL辅助函数 -}
 
 -- 打印提示符并刷新标准输出缓冲区
 prompt :: String -> IO ()
@@ -96,22 +88,6 @@ runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
     once :: InterpM Lisp
     once = loadProc [String "stdlib.scm"]  >> evalString exprs
 runOnce args = putStrLn $ "Invalid Options: " ++ show args
-
-{-
-run :: IO ()
-run = do
-  r <- defaultEnv
-  v <- runErrorT $ runReaderT (runContT interp f) (SC r)
-  case v of
-    Left e -> putStrLn $ show e
-    Right result -> putStrLn $ show result
-  where
-    f (Fixnum a) = return $ Fixnum $ a + 1
-    f val = return val
--}
-
---evalString :: String -> InterpM Lisp
---evalString s = readLisp s >>= evalProc
 
 
 errorHandler :: LispError -> InterpM Lisp
