@@ -1,6 +1,6 @@
 -- fscm/core
 module Scheme.Primitives
-    (loadProc, readProc, evalProc,
+    (loadProc, readProc, evalProc, readString,
      keywords, primitives, primitivesIo)
     where
 
@@ -291,10 +291,7 @@ readString [String str] = do
 -- read函数将Datum解析为内部对象(Lisp)
 readProc :: [Lisp] -> InterpM Lisp
 readProc [] = readProc [HPort stdin] -- 缺省端口
-readProc [HPort port] = do
-  s <- liftIO $ hGetLine port
-  r <- readLisp s
-  readString [String s]
+readProc [HPort port] = (liftIO $ hGetLine port) >>= \s -> readString [String s]
 
 -- 将LispVal转换为字符串后写入端口
 writeProc :: [Lisp] -> InterpM Lisp
