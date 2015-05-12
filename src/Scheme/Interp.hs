@@ -89,7 +89,6 @@ evalString str = do
            return Void
 
 -- 以命令行参数方式运行
--- TODO 增加在命令行解释执行的功能
 runOnce :: [String] -> IO ()
 runOnce [arg] = defaultEnv >>= \r -> runInterp r $ loadProc [String arg]  -- 执行脚本文件
 runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
