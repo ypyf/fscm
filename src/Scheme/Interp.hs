@@ -37,15 +37,6 @@ primitiveIoBindings = [(k, v) | (k, f) <- primitivesIo, let v = IOFunc f]
 syntaxBindings :: [(String, Lisp)]
 syntaxBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
 
--- 以命令行参数方式运行
--- TODO 增加在命令行解释执行的功能
-runOnce :: [String] -> IO ()
-runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
-  where
-    once :: InterpM Lisp
-    once = loadProc [String "stdlib.scm"]  >> evalString exprs
-runOnce args = putStrLn $ "Invalid Options: " ++ show args
-
 -- runOnce args = do
 --   -- 初始化环境并将命令行参数绑定到环境中
 --   env <- primitiveBindings >>= flip bindVars [("args", List $ map String $ drop 1 args)]
@@ -96,6 +87,17 @@ evalString str = do
     _    -> do
            liftIO $ putStrLn $ show r
            return Void
+
+-- 以命令行参数方式运行
+-- TODO 增加在命令行解释执行的功能
+runOnce :: [String] -> IO ()
+runOnce [arg] = defaultEnv >>= \r -> runInterp r $ loadProc [String arg]  -- 执行脚本文件
+runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
+  where
+    once :: InterpM Lisp
+    once = loadProc [String "stdlib.scm"]  >> evalString exprs
+runOnce args = putStrLn $ "Invalid Options: " ++ show args
+
 {-
 run :: IO ()
 run = do
