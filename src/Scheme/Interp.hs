@@ -64,7 +64,7 @@ runInterp :: Env -> InterpM Lisp -> IO ()
 runInterp env interp = do
   v <- runErrorT $ runReaderT (evalContT interp) (SC env)
   case v of
-    Left e  -> putStrLn $ show e
+    Left e  -> putStrLn $ show e  -- 打印错误消息
     Right _ -> return ()
 
 -- just like (eval (read-string str))
@@ -74,9 +74,7 @@ evalString str = do
   r <- evalProc [x]
   case r of
     Void -> return Void
-    _    -> do
-           liftIO $ putStrLn $ show r
-           return Void
+    _    -> (liftIO $ putStrLn $ show r) >> return Void
 
 -- 以命令行参数方式运行
 runOnce :: [String] -> IO ()
@@ -84,7 +82,7 @@ runOnce [arg] = defaultEnv >>= \r -> runInterp r $ loadProc [String arg]  -- 执
 runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
   where
     once :: InterpM Lisp
-    once = loadProc [String "stdlib.scm"]  >> evalString exprs
+    once = loadProc [String "stdlib.scm"] >> evalString exprs
 runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
 
