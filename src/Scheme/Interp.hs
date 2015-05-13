@@ -50,7 +50,7 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
    looper :: InterpM Lisp
    looper = do
      loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
-     forever $ (liftIO $ prompt "> ") >> interp
+     forever $ (liftIO $ prompt "> ") >> interp >> liftIO (hFlush stdout)
 
 runInterp :: Env -> InterpM Lisp -> IO ()
 runInterp env interp = do

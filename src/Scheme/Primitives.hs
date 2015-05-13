@@ -252,9 +252,9 @@ currentOutputPort args = throwError $ NumArgs 0 args
 
 -- r5rs 6.6.3
 display :: [Lisp] -> InterpM Lisp
--- TODO 端口没有指定时，应该获取当前端口
+-- TODO 端口没有指定时应该获取当前端口
 display [val] = display [val, HPort stdout]
-display [val, HPort port] = display' val port >> liftIO (hFlush port) >> return Void
+display [val, HPort port] = display' val port >> return Void
 display args = callCC $ \k -> throwError $ RTE "1 arg expected." k
 
 display' :: Lisp -> Handle -> InterpM ()
@@ -293,7 +293,7 @@ readProc :: [Lisp] -> InterpM Lisp
 readProc [] = readProc [HPort stdin] -- 缺省端口
 readProc [HPort port] = (liftIO $ hGetLine port) >>= \s -> readString [String s]
 
--- 将LispVal转换为字符串后写入端口
+-- 将Lisp转换为字符串形式的外部表示后写入端口
 writeProc :: [Lisp] -> InterpM Lisp
 writeProc [obj] = writeProc [obj, HPort stdout]  -- 缺省端口
 writeProc [obj, HPort port] = liftIO $ hPrint port obj >> (return LispTrue)
@@ -644,11 +644,11 @@ primitivesIo =
      ("open-output-file", makePort WriteMode),
      ("close-input-port", closePort),
      ("close-output-port", closePort),
-     ("flush-output", flushOutputProc),
+     ("flush-output", flushOutputProc),  -- 非r5rs
      ("current-input-port", currentInputPort),
      ("current-output-port", currentOutputPort),
      ("read", readProc),
-     ("read-string", readString),
+     ("read-string", readString),  -- 非r5rs
      ("write", writeProc),
      ("read-contents", readContents),
      ("read-all", readAll),
