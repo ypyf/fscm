@@ -8,7 +8,7 @@ all: fscm
 
 fscm: $(SRC)
 	ghc --make Main.hs -fwarn-missing-signatures -optc-Os -O2 -o $(EXE)
-	strip -p --strip-unneeded --remove-section=.comment -o $(EXE) $(EXE)
+	strip -p --strip-unneeded --remove-section=.comment $(EXE)
 
 Scheme/Scan.hs: Scheme/Scan.x
 	alex Scheme/Scan.x
