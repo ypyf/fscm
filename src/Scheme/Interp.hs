@@ -50,24 +50,22 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
    looper :: InterpM Lisp
    looper = do
      loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
-     forever $ (liftIO $ prompt "> ") >> interp >> liftIO (hFlush stdout)
+     forever $ (liftIO $ prompt "> ") >> interp
+   interp :: InterpM Lisp
+   interp = do
+     -- TODO 检查语法后再调用readLisp
+     x <- readProc [] `catchError` readerErrorHandler
+     r <- evalProc [x] `catchError` errorHandler
+     case r of
+       Void -> return Void
+       _    -> (liftIO $ putStrLn $ show r) >> return Void
 
 runInterp :: Env -> InterpM Lisp -> IO ()
 runInterp env interp = do
   v <- runErrorT $ runReaderT (evalContT interp) (SC env)
   case v of
-    Left e -> putStrLn $ show e
-    Right result -> prompt $ show result
-
-interp :: InterpM Lisp
-interp = do
-  x <- readProc [] `catchError` readerErrorHandler
-  r <- evalProc [x] `catchError` errorHandler
-  case r of
-    Void -> return Void
-    _    -> do
-      liftIO $ putStrLn $ show r
-      return Void
+    Left e  -> putStrLn $ show e
+    Right _ -> return ()
 
 -- just like (eval (read-string str))
 evalString :: String -> InterpM Lisp
