@@ -96,9 +96,11 @@ mkClosure locals upvalues body = do
 
 -- 用于尾部表达式的求值(尾调用优化)
 eval_tail :: Lisp -> InterpM Lisp
-eval_tail arg@(List (Symbol "lambda":_)) = eval arg
-eval_tail (List (x:xs)) = eval x >>= \fn -> apply_tail (fn:xs)
-eval_tail x = eval x
+eval_tail expr@(List (x:xs)) =
+  case x of
+    Symbol "lambda" -> eval expr
+    _               -> eval x >>= \fn -> apply_tail (fn:xs)
+eval_tail expr = eval expr
 
 
 apply :: [Lisp] -> InterpM Lisp
@@ -125,10 +127,7 @@ apply (x:xs) = do
 
 
 apply_tail :: [Lisp] -> InterpM Lisp
---apply_tail (Lambda func:xs) = do
---    rx <- mapM eval xs
---    callCC $ \k -> func rx >>= k   --
--- 尾部的函数应用只对参数进行求值，然后返回尾调用对象
+-- 尾部的函数应用只对参数在当前作用域内求值，然后返回尾调用对象
 apply_tail (Lambda func:xs) = mapM eval xs >>= \v -> return $ List $ TailCall func : v
-apply_tail exps = apply exps
+apply_tail expr = apply expr
 
