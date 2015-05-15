@@ -38,7 +38,6 @@ syntaxBindings :: [(String, Lisp)]
 syntaxBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
 
 
--- 打印提示符并刷新标准输出缓冲区
 prompt :: String -> IO ()
 prompt str = putStr str >> hFlush stdout
 
