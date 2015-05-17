@@ -27,7 +27,7 @@
 (define g (lambda (a b) ((lambda () (+ 1 3)(g a b)))))
 (define h (lambda (a b) (if 1 (begin (+ 1 2) (h a b)) a)))
 
-; æœ‰ç©·é€’å½’
+; ÓÐÇîµÝ¹é
 (define j (lambda (a b) 
 	(if (< a b)
 		(j (+ a 1) b)
@@ -35,7 +35,7 @@
 
 ;; (+ 1 2 3 (j 1 2))
 
-;; æœ‰é—®é¢˜
+;; ÓÐÎÊÌâ
 (define count 0)
 (define jj (lambda () 
 	(if (< count 1000000)
@@ -48,7 +48,7 @@
 		(begin (set! count (+ count 1))(kk))
 		1)))
 		
-;; äº’é€’å½’
+;; »¥µÝ¹é
 (define f0 (lambda()(f1)))
 (define f1 (lambda()(f2)))
 (define f2 (lambda()(f0)))

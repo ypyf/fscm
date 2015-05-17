@@ -1,4 +1,4 @@
-module Scheme.Interp (defaultInterp, defaultEnv, runInterp, runREPL, runOnce) where
+module Scheme.Interp (defaultEnv, runInterp, runREPL, runOnce) where
 
 import Scheme.Types
 import Scheme.Primitives
@@ -20,7 +20,7 @@ emptyStore = M.empty
 -- 缺省环境
 defaultEnv :: IO Env
 defaultEnv = do
-  let env = keywordsBindings ++ primitiveBindings ++ primitiveIoBindings
+  let env = syntaxBindings ++ primitiveBindings ++ primitiveIoBindings
   lst <- mapM (\(k, v) -> newIORef v >>= \v -> return (k, v)) env
   return $ M.fromList lst
 
@@ -34,71 +34,56 @@ primitiveIoBindings :: [(String, Lisp)]
 primitiveIoBindings = [(k, v) | (k, f) <- primitivesIo, let v = IOFunc f]
 
 -- 语法关键词(特殊形式)
-keywordsBindings :: [(String, Lisp)]
-keywordsBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
+syntaxBindings :: [(String, Lisp)]
+syntaxBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
 
--- 以命令行参数方式运行
--- TODO 增加在命令行解释执行的功能
-runOnce :: [String] -> IO ()
-runOnce args = putStrLn "runOnce Unimplementation!"
--- runOnce args = do
---   -- 初始化环境并将命令行参数绑定到环境中
---   env <- primitiveBindings >>= flip bindVars [("args", List $ map String $ drop 1 args)]
---   -- 从命令行载入文件
---   (runIOThrows $ liftM show $ eval env (List [Symbol "load", String (args !! 0)]))
---   >>= hPutStrLn stderr
 
-{- REPL辅助函数 -}
-
--- 打印提示符并刷新标准输出缓冲区
 prompt :: String -> IO ()
-prompt = flushStr
-
-flushStr :: String -> IO ()
-flushStr str = putStr str >> hFlush stdout
+prompt str = putStr str >> hFlush stdout
 
 -- 运行REPL解释器
+-- TODO 使用Scheme本身去写REPL
 runREPL :: IO ()
-runREPL = defaultEnv >>= \r -> runInterp r defaultInterp
+runREPL = defaultEnv >>= \r -> runInterp r looper
+ where
+   looper :: InterpM Lisp
+   looper = do
+     loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
+     forever $ (liftIO $ prompt "> ") >> interp
+   interp :: InterpM Lisp
+   interp = do
+     -- TODO 检查语法后再调用readLisp
+     x <- readProc [] `catchError` readerErrorHandler
+     r <- evalProc [x] `catchError` errorHandler
+     case r of
+       Void -> return Void
+       _    -> (liftIO $ putStrLn $ show r) >> return Void
 
 runInterp :: Env -> InterpM Lisp -> IO ()
 runInterp env interp = do
   v <- runErrorT $ runReaderT (evalContT interp) (SC env)
   case v of
-    Left e -> putStrLn $ show e
-    Right result -> flushStr $ show result
+    Left e  -> putStrLn $ show e  -- 打印错误消息
+    Right _ -> return ()
 
-{-
-run :: IO ()
-run = do
-  r <- defaultEnv
-  v <- runErrorT $ runReaderT (runContT interp f) (SC r)
-  case v of
-    Left e -> putStrLn $ show e
-    Right result -> putStrLn $ show result
-  where
-    f (Fixnum a) = return $ Fixnum $ a + 1
-    f val = return val
--}
-
---evalString :: String -> InterpM Lisp
---evalString s = readLisp s >>= evalProc
-
-interp :: InterpM Lisp
-interp = do
-  x <- readProc [] `catchError` readerErrorHandler
-  r <- evalProc [x] `catchError` errorHandler
+-- just like (eval (read-string str))
+evalString :: String -> InterpM Lisp
+evalString str = do
+  x <- readString [String str]
+  r <- evalProc [x]
   case r of
     Void -> return Void
-    _    -> do
-      liftIO $ putStrLn $ show r
-      return Void
+    _    -> (liftIO $ putStrLn $ show r) >> return Void
 
--- TODO 使用Scheme本身去写REPL
-defaultInterp :: InterpM Lisp
-defaultInterp = do
-  loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
-  forever interp
+-- 以命令行参数方式运行
+runOnce :: [String] -> IO ()
+runOnce [arg] = defaultEnv >>= \r -> runInterp r $ loadProc [String arg]  -- 执行脚本文件
+runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
+  where
+    once :: InterpM Lisp
+    once = loadProc [String "stdlib.scm"] >> evalString exprs
+runOnce args = putStrLn $ "Invalid Options: " ++ show args
+
 
 errorHandler :: LispError -> InterpM Lisp
 errorHandler e = (liftIO $ putStrLn $ show e) >> return Void

@@ -1,6 +1,6 @@
 -- fscm/core
 module Scheme.Primitives
-    (loadProc, readProc, evalProc,
+    (loadProc, readProc, evalProc, readString,
      keywords, primitives, primitivesIo)
     where
 
@@ -39,7 +39,7 @@ time (x:xs) = do
   stop <- liftIO $ getCurrentTime
   liftIO $ print $ diffUTCTime stop start
   return v
-time _ = throwError $ Default "define: bad syntax"
+time _ = throwError $ Default "time: bad syntax"
 
 bench :: [Lisp] -> InterpM Lisp
 bench _ = return Void
@@ -54,20 +54,18 @@ defineVar [Symbol name, expr] = do
   r <- ask
   case getValue name r of
     Nothing -> do
-      -- define类似于letrec，允许闭包的递归定义，所以先设定一个初始值
+      -- define类似于letrec，允许闭包的递归定义，所以先设定一个临时的初值
       -- 在修改后的环境中执行后续计算
-      -- 第一次定义变量
       tmp <- liftIO $ newIORef Void
-      callCC $ \k -> local (insert tmp) (def tmp >> k Void)
+      callCC $ \k -> local (insert tmp) (def tmp >>= k)
     -- 重定义变量
     Just x -> def x >> return Void
   where
     insert :: IORef Lisp -> Context -> Context
     insert v (SC r) = SC $ M.insert name v r
     insert v (TC locals upvalues r) = TC (insert v locals) upvalues r
-    -- 有的实现似乎可以定义为void
-    def :: IORef Lisp -> InterpM ()
-    def ref = eval expr >>= liftIO . writeIORef ref
+    def :: IORef Lisp -> InterpM Lisp
+    def ref = eval expr >>= liftIO . writeIORef ref >> return Void
 
 -- (define (name...) ...)
 defineVar (List (Symbol name:xs):body) =
@@ -178,14 +176,6 @@ keywords =
 quitProc :: [Lisp] -> InterpM Lisp
 quitProc _ = liftIO $ exitWith ExitSuccess
 
--- 载入Hs目标模块(*.o)
-loadPlug :: [Lisp] -> InterpM Lisp
-loadPlug [String file, String name] = do
-    mv <- liftIO $ PL.load file ["."] [] name
-    case mv of
-        PL.LoadFailure errs -> throwError $ Default $ show errs
-        PL.LoadSuccess _ v  -> return $ HFunc (v::[Lisp] -> InterpM Lisp)
-loadPlug args = throwError $ NumArgs 1 args
 
 -- 载入lisp源文件
 loadFile :: String -> InterpM [Lisp]
@@ -269,9 +259,9 @@ currentOutputPort args = throwError $ NumArgs 0 args
 
 -- r5rs 6.6.3
 display :: [Lisp] -> InterpM Lisp
--- TODO 端口没有指定时，应该获取当前端口
+-- TODO 端口没有指定时应该获取当前端口
 display [val] = display [val, HPort stdout]
-display [val, HPort port] = display' val port >> liftIO (hFlush port) >> return Void
+display [val, HPort port] = display' val port >> return Void
 display args = callCC $ \k -> throwError $ RTE "1 arg expected." k
 
 display' :: Lisp -> Handle -> InterpM ()
@@ -295,29 +285,22 @@ closePort :: [Lisp] -> InterpM Lisp
 closePort [HPort port] = liftIO $ hClose port >> return LispTrue
 closePort _ = return LispFalse
 
--- read函数
--- read函数将Datum解析为内部对象(Lisp)
-readProc :: [Lisp] -> InterpM Lisp
-readProc [] = do --readProc [HPort stdin] -- 缺省端口
-    line <- liftIO $ RL.readline "> "
-    case line of
-        Nothing -> return Void -- EOF
-        Just s  ->
-            if s /= [] then do
-                liftIO $ RL.addHistory s
-                r <- readLisp s
-                case r of
-                    [] -> return Void
-                    x:xs -> return x
-            else return Void
-readProc [HPort port] = do
-  s <- liftIO $ hGetLine port
-  r <- readLisp s
+-- from Clojure :-)
+readString :: [Lisp] -> InterpM Lisp
+readString [] = throwError $ NumArgs 1 []
+readString [String str] = do
+  r <- readLisp str
   case r of
     [] -> return Void
     x:xs -> return x -- TODO rest部分应该缓存，下一次继续读
 
--- 将LispVal转换为字符串后写入端口
+-- read函数
+-- read函数将Datum解析为内部对象(Lisp)
+readProc :: [Lisp] -> InterpM Lisp
+readProc [] = readProc [HPort stdin] -- 缺省端口
+readProc [HPort port] = (liftIO $ hGetLine port) >>= \s -> readString [String s]
+
+-- 将Lisp转换为字符串形式的外部表示后写入端口
 writeProc :: [Lisp] -> InterpM Lisp
 writeProc [obj] = writeProc [obj, HPort stdout]  -- 缺省端口
 writeProc [obj, HPort port] = liftIO $ hPrint port obj >> (return LispTrue)
@@ -658,7 +641,6 @@ primitivesIo :: [(String, [Lisp] -> InterpM Lisp)]
 primitivesIo =
     [
      ("load", loadProc),
-     ("load-hs-proc", loadPlug),
      ("eval", evalProc),
      ("apply", applyProc),
      ("call-with-current-continuation", callcc),
@@ -669,10 +651,11 @@ primitivesIo =
      ("open-output-file", makePort WriteMode),
      ("close-input-port", closePort),
      ("close-output-port", closePort),
-     ("flush-output", flushOutputProc),
+     ("flush-output", flushOutputProc),  -- 非r5rs
      ("current-input-port", currentInputPort),
      ("current-output-port", currentOutputPort),
      ("read", readProc),
+     ("read-string", readString),  -- 非r5rs
      ("write", writeProc),
      ("read-contents", readContents),
      ("read-all", readAll),

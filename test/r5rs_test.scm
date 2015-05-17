@@ -1,7 +1,7 @@
 (define (is a b) (display (equal? a b)) (newline))
 
-; åº”è¯¥ç­‰ä»·äºŽ(list 1)ï¼Œæ‰€ä»¥è¾“å‡ºçš„æ˜¯ ==> (1)
-; åœ¨æŸäº›é”™è¯¯çš„å®žçŽ°ä¸­(æ¯”å¦‚tinyscheme 1.41)ï¼Œç­‰ä»·äºŽ(quote if)ï¼Œæ‰€ä»¥è¾“å‡ºçš„æ˜¯ ==> if
+; Ó¦¸ÃµÈ¼ÛÓÚ(list 1)£¬ËùÒÔÊä³öµÄÊÇ ==> (1)
+; ÔÚÄ³Ð©´íÎóµÄÊµÏÖÖÐ(±ÈÈçtinyscheme 1.41)£¬µÈ¼ÛÓÚ(quote if)£¬ËùÒÔÊä³öµÄÊÇ ==> if
 (is ((lambda (quote if) (quote if)) list 1) '(1))
 
 ; procedure application

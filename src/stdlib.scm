@@ -6,7 +6,7 @@
 (define (null? obj) (if (eqv? obj '()) #t #f))
 
 (define (list . objs) objs)
-; another form to define `list'
+; alternative `list'
 (define list (lambda x x))
 
 (define (id obj) obj)
@@ -73,6 +73,12 @@
 ;;            (cons (f (car lst)) (map f (cdr lst))))))
 (define (filter pred lst) (foldr (lambda (x y) (if (pred x) (cons x y) y)) '() lst))
 
+;; from Common Lisp
+(define list-cdr
+    (lambda (x)
+        (if (null? x)
+            '()
+            (cdr x))))
 
 (define (list-tail lst k)
   (if (zero? k)
