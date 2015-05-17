@@ -16,6 +16,7 @@ import System.IO
 import Data.Time
 import Data.IORef
 import qualified Data.Map.Strict as M
+import qualified Data.Vector as V
 import Data.Foldable (foldlM)
 import Control.Monad
 import Control.Monad.Reader
@@ -24,8 +25,6 @@ import Control.Monad.State.Lazy
 import Control.Monad.Trans.Cont
 import Control.Concurrent (threadDelay)
 
-import qualified System.Plugins.Load as PL
-import qualified System.Console.Readline as RL
 
 --
 -- 语法关键字
@@ -49,6 +48,7 @@ quote [datum] = return datum
 quote args = throwError $ NumArgs 1 args
 
 -- 参见 r5rs 5.2.1
+-- FIXME 只能出现在顶层或<body>的开始
 defineVar :: [Lisp] -> InterpM Lisp
 defineVar [Symbol name, expr] = do
   r <- ask
@@ -139,13 +139,34 @@ letStarExp (List bindings:body) = do
 -- (begin e1 e2 ...) => ((lambda () e1 e2 ...))
 -- FIXME 顶层begin中的define应该绑定在顶层环境
 beginExp :: [Lisp] -> InterpM Lisp
-beginExp [] = return Nil
+beginExp [] = return Void
 beginExp lst = eval_tail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
 
 
-letSyntax :: [Lisp] -> InterpM Lisp
-letSyntax _ = return Nil
-
+-- (define-syntax ...)
+-- 参见 r5rs 5.3
+-- FIXME只能出现在程序的顶层
+-- 转换器的输入是一组规则和S表达式
+-- 输出是转换后的S表达式
+defineSyntax :: [Lisp] -> InterpM Lisp
+defineSyntax [Symbol name, syntax] = return Void
+--  let List (Symbol "syntax-rules":List ids:rules) = syntax
+--  return $ Transformer $ t rules
+--  where
+--    -- 返回空表示无法匹配
+--    t :: [Lisp] -> [Lisp] -> [Lisp]
+--    t [] _ = []
+--    t (List [pattern, template]:rs) exprs =
+--      let Symbol key = head pattern -- 模式中出现的关键字
+--          Symbol key' = head exprs  -- 表达式中出现的关键字
+--      in
+--        if (key == name || key `elem` ids) then
+--            if length pattern == length exprs && key == key' then
+--                
+--            else t rs exprs
+--        else []
+   
+  
 
 defineModule :: [Lisp] -> InterpM Lisp
 defineModule [List [file]] = return Void
@@ -154,6 +175,7 @@ defineModule [List [file]] = return Void
 keywords :: [(String, [Lisp] -> InterpM Lisp)]
 keywords =
     [
+     ("define-syntax", defineSyntax),
      ("quote", quote),
      ("let", letExp),
      ("let*", letStarExp),
@@ -163,7 +185,6 @@ keywords =
      ("set!", setVar),
      ("time", time),
      ("bench", bench),
-     ("let-syntax", letSyntax),
      ("define-module", defineModule)
     ]
 

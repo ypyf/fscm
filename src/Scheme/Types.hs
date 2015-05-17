@@ -39,7 +39,7 @@ data Lisp = Nil
           | LispFalse
           | DotList ![Lisp] !Lisp  -- 非严格表
           | List ![Lisp]
-          | Vector ![Lisp]
+          | Vector ![Lisp] -- TODO []换成Array
           | Func !([Lisp] -> ThrowsError Lisp) -- 纯的内置函数
           | IOFunc !([Lisp] -> InterpM Lisp)  -- 有IO副作用的内置函数
           | Lambda !([Lisp] -> InterpM Lisp)  -- 自定义函数 这些类型看似相同，但不应该合并，因为要处理尾递归
@@ -52,6 +52,7 @@ data Lisp = Nil
           | HPort !Handle -- IO函数使用的端口
           | Environment !Env -- 环境
           | Module String -- 模块
+          | Transformer ([Lisp] -> [Lisp])
 
 instance Show Lisp where show = showVal
 --showVal (Ratio x) = show (numerator x) ++ "%" ++ show (denominator x)
@@ -66,6 +67,7 @@ showVal (Lambda _) = "#<procedure>"
 showVal (HFunc _) = "#<hs-procedure>"
 showVal (HPort _) = "#<port>"
 showVal (Syntax _) = "#<special-form>"
+showVal (Transformer _) = "#<transformer>"
 -- showVal (Func {name = name, params = args, vararg = varargs, body = body, closure = env}) = 
     -- "(" ++ name ++ case argslist of
                      -- []        -> varargslist ++ ")"
