@@ -62,8 +62,8 @@
   (product 1 n))
   
 (define (fib n) (if (= n 1)
-                    1 
-                    (if (= n 2) 1(fibTail n 1 1))))
+                    0 
+                    (if (= n 2) 1 (fibTail n 0 1))))
                     
 (define (fibTail n a b) (if (= n 3) 
                             (+ a b)
