@@ -1,4 +1,4 @@
-module Scheme.Eval (eval, eval_tail) where
+module Scheme.Eval (eval, eval_tail, apply) where
 
 import Scheme.Types
 import Scheme.Variables

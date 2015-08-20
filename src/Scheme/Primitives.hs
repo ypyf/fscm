@@ -236,14 +236,7 @@ evalProc args = throwError $ NumArgs 1 args
 
 -- call-with-current-continuation
 callcc :: [Lisp] -> InterpM Lisp
-callcc [Lambda fn] = callCC (\k -> fn [Continuation k])
-callcc [Continuation cont] = callCC (\k -> cont (Continuation k))
-callcc [IOFunc fn] = callCC (\k -> fn [Continuation k])
-callcc [Func fn] = callCC $ \k ->
-                   case fn [Continuation k] of
-                     Left e -> throwError e  -- 再次抛出以提升纯函数中的ThrowsError
-                     Right res -> return res
-callcc [arg] = throwError $ TypeMismatch "* -> *" arg
+callcc [fn] = callCC $ \k -> apply [fn, Continuation k]
 callcc args = throwError $ NumArgs 2 args
 
 
