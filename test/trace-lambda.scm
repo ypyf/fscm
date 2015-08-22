@@ -1,6 +1,5 @@
 ﻿#lang racket
 ; 当输入是1000的时候，guile会stack-overflow
-; 我的JScheme则没有问题，但10000就不行了
 (define sum
   (lambda (n)
     (if (= n 1)
