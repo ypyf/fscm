@@ -18,6 +18,6 @@ executable fscm
   default-language:    Haskell2010
   main-is:             Main.hs
   -- other-modules:       
-  build-depends:       base ==4.7.*, mtl ==2.2.*, array ==0.5.*, containers ==0.5.*, transformers ==0.4.*, time ==1.4.*
+  build-depends:       base ==4.8.*, mtl ==2.2.*, array ==0.5.*, containers ==0.5.*, transformers ==0.4.*, time ==1.4.*
   hs-source-dirs:      src
   build-tools:         alex, happy ==1.19.*
