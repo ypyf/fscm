@@ -157,10 +157,6 @@ showError (RTE message errorConkt) = message
 
 instance Show LispError where show = showError
 
---instance Error LispError where
---    noMsg = Default "An error has occurred"
---    strMsg = Default
-
 -- | 空列表
 nil :: Lisp
 nil = List []
