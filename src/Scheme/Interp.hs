@@ -8,7 +8,7 @@ import Data.IORef
 import Control.Exception.Base
 import Control.Monad
 import Control.Monad.Reader
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.Trans.Cont
 import Control.Monad.State.Lazy
 import qualified Data.Map.Strict as M
@@ -61,7 +61,7 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
 
 runInterp :: Env -> InterpM Lisp -> IO ()
 runInterp env interp = do
-  v <- runErrorT $ runReaderT (evalContT interp) (SC env)
+  v <- runExceptT $ runReaderT (evalContT interp) (SC env)
   case v of
     Left e  -> putStrLn $ show e  -- 打印错误消息
     Right _ -> return ()

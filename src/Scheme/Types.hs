@@ -6,7 +6,7 @@
 module Scheme.Types where
 
 import Data.Ratio
-import Control.Monad.Error
+import Control.Monad.Except
 import System.IO
 import Data.IORef
 import qualified Data.Map.Strict as M
@@ -125,7 +125,7 @@ instance MonadError e m => MonadError e (ContT r m) where
     m `catchError` h = ContT $ \c -> runContT m c `catchError` \e -> runContT (h e) c
 
 -- 解释器单子
-type InterpM = ContT Lisp (ReaderT Context (ErrorT LispError IO))
+type InterpM = ContT Lisp (ReaderT Context (ExceptT LispError IO))
 
 
 -- 解释器错误
@@ -157,9 +157,9 @@ showError (RTE message errorConkt) = message
 
 instance Show LispError where show = showError
 
-instance Error LispError where
-    noMsg = Default "An error has occurred"
-    strMsg = Default
+--instance Error LispError where
+--    noMsg = Default "An error has occurred"
+--    strMsg = Default
 
 -- | 空列表
 nil :: Lisp

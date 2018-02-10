@@ -16,7 +16,6 @@ import System.IO
 import Data.Time
 import Data.IORef
 import qualified Data.Map.Strict as M
-import qualified Data.Vector as V
 import Data.Foldable (foldlM)
 import Control.Monad
 import Control.Monad.Reader
