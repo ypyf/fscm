@@ -40,7 +40,7 @@ eval (List (Symbol "lambda":List s:body)) = do
 -- 可变参数
 -- (lambda x ...)
 -- (lambda (. x) ...) => (lambda x ...) 这种形式在parse阶段已经被转换
-eval (List (Symbol "lambda":(Symbol s):body)) = do
+eval (List (Symbol "lambda":Symbol s:body)) = do
   upvalues <- ask
   return $ Lambda $ \v -> do
     v' <- liftIO $ newIORef (List v)
@@ -58,15 +58,11 @@ eval (List (Symbol "lambda":dl@(DotList s0 s1):body)) = do
   return $ Lambda $ \v ->
       if length v < nargs then throwError $ NumArgs nargs v
       else do
-        v0 <- liftIO $ sequence $ map newIORef v
+        v0 <- liftIO $ mapM newIORef v
         v1 <- liftIO $ newIORef (List $ drop nargs v)
-        let locals = M.fromList $ (zip params v0) ++ [(vararg, v1)]
+        let locals = M.fromList $ zip params v0 ++ [(vararg, v1)]
         mkClosure locals upvalues body
 
-
--- apply
--- 函数应用前必须先对参数求值
--- 语法关键词（特殊形式）不对参数求值
 eval form@(DotList s0 s1) = throwError $ Default $ "illegal use of `.' in: " ++ show form
 
 -- function apply
@@ -88,7 +84,7 @@ mkClosure locals upvalues body = do
     _                      -> return ret
   where
     f (SC r) = TC (SC locals) upvalues (SC r)
-    f r@(TC _ _ _) = TC (SC locals) upvalues r   -- 注意环境合并的顺序
+    f r@TC{} = TC (SC locals) upvalues r   -- 注意环境合并的顺序
     closure :: [Lisp] -> InterpM Lisp
     closure [x] = eval_tail x
     closure (x:xs) = eval x >> closure xs
@@ -102,7 +98,9 @@ eval_tail expr@(List (x:xs)) =
     _               -> eval x >>= \fn -> apply_tail (fn:xs)
 eval_tail expr = eval expr
 
-
+-- apply
+-- 函数应用前必须先对参数求值
+-- 语法关键词（特殊形式）不对参数求值
 apply :: [Lisp] -> InterpM Lisp
 apply (IOFunc func:xs) = mapM eval xs >>= func
 apply (Lambda func:xs) = mapM eval xs >>= func
@@ -115,14 +113,14 @@ apply (Continuation k:xs) = do
     []  -> k Void
     [x] -> k x
     -- 多值 FIXME
-    xs  -> mapM (liftM k . eval) xs >> return Void
+    xs  -> mapM_ (fmap k . eval) xs >> return Void
 apply (Func fn:xs) = do
   v <- mapM eval xs
   case fn v of
     Left e -> throwError e  -- 再次抛出,提升ThrowsError
     Right res -> return res
 apply (x:xs) = do
-  mapM eval xs
+  mapM_ eval xs
   throwError $ Default $ "expected procedure, given: " ++ show x ++ "; arguments were: " ++ unwordsList xs
 
 
@@ -130,4 +128,3 @@ apply_tail :: [Lisp] -> InterpM Lisp
 -- 尾部的函数应用只对参数在当前作用域内求值，然后返回尾调用对象
 apply_tail (Lambda func:xs) = mapM eval xs >>= \v -> return $ List $ TailCall func : v
 apply_tail expr = apply expr
-

@@ -49,7 +49,7 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
    looper :: InterpM Lisp
    looper = do
      loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
-     forever $ (liftIO $ prompt "> ") >> interp
+     forever $ liftIO (prompt "> ") >> interp
    interp :: InterpM Lisp
    interp = do
      -- TODO 检查语法后再调用readLisp
@@ -57,13 +57,13 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
      r <- evalProc [x] `catchError` errorHandler
      case r of
        Void -> return Void
-       _    -> (liftIO $ putStrLn $ show r) >> return Void
+       _    -> liftIO (print r) >> return Void
 
 runInterp :: Env -> InterpM Lisp -> IO ()
 runInterp env interp = do
   v <- runExceptT $ runReaderT (evalContT interp) (SC env)
   case v of
-    Left e  -> putStrLn $ show e  -- 打印错误消息
+    Left e  -> print e  -- 打印错误消息
     Right _ -> return ()
 
 -- just like (eval (read-string str))
@@ -73,7 +73,7 @@ evalString str = do
   r <- evalProc [x]
   case r of
     Void -> return Void
-    _    -> (liftIO $ putStrLn $ show r) >> return Void
+    _    -> liftIO (print r) >> return Void
 
 -- 以命令行参数方式运行
 runOnce :: [String] -> IO ()
@@ -86,13 +86,13 @@ runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
 
 errorHandler :: LispError -> InterpM Lisp
-errorHandler e = (liftIO $ putStrLn $ show e) >> return Void
+errorHandler e = liftIO (print e) >> return Void
 
 loaderErrorHandler :: LispError -> InterpM Lisp
-loaderErrorHandler e = (liftIO $ putStrLn $ "load: " ++ show e) >> return Void
+loaderErrorHandler e = liftIO (putStrLn $ "load: " ++ show e) >> return Void
 
 readerErrorHandler :: LispError -> InterpM Lisp
-readerErrorHandler e = (liftIO $ putStrLn $ "read: " ++ show e) >> return Void
+readerErrorHandler e = liftIO (putStrLn $ "read: " ++ show e) >> return Void
 
 -- TODO 处理Haskell内置异常
 handler :: ArithException -> IO ()

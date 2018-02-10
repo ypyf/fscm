@@ -1,5 +1,4 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -68,7 +67,7 @@ showVal (HFunc _) = "#<hs-procedure>"
 showVal (HPort _) = "#<port>"
 showVal (Syntax _) = "#<special-form>"
 showVal (Transformer _) = "#<transformer>"
--- showVal (Func {name = name, params = args, vararg = varargs, body = body, closure = env}) = 
+-- showVal (Func {name = name, params = args, vararg = varargs, body = body, closure = env}) =
     -- "(" ++ name ++ case argslist of
                      -- []        -> varargslist ++ ")"
                      -- otherwise -> case varargslist of

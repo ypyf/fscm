@@ -32,9 +32,9 @@ import Control.Concurrent (threadDelay)
 -- 一个简单的计时函数
 time :: [Lisp] -> InterpM Lisp
 time (x:xs) = do
-  start <- liftIO $ getCurrentTime
+  start <- liftIO getCurrentTime
   v <- eval x
-  stop <- liftIO $ getCurrentTime
+  stop <- liftIO getCurrentTime
   liftIO $ print $ diffUTCTime stop start
   return v
 time _ = throwError $ Default "time: bad syntax"
@@ -132,8 +132,8 @@ letStarExp (List bindings:body) = do
             return $ (x, v) : xs'
         unpack (x:_) = throwError $ BadSpecialForm "let*" x
         foo :: [(Lisp, Lisp)] -> [Lisp]
-        foo [] = List (Symbol "lambda":List []:body):[]
-        foo ((k,v):xs) = List (Symbol "lambda":List [k]:List (foo xs):[]):[v]
+        foo [] = [List (Symbol "lambda":List []:body)]
+        foo ((k,v):xs) = List [Symbol "lambda",List [k],List (foo xs)]:[v]
 
 -- (begin e1 e2 ...) => ((lambda () e1 e2 ...))
 -- FIXME 顶层begin中的define应该绑定在顶层环境
@@ -161,16 +161,16 @@ defineSyntax [Symbol name, syntax] = return Void
 --      in
 --        if (key == name || key `elem` ids) then
 --            if length pattern == length exprs && key == key' then
---                
+--
 --            else t rs exprs
 --        else []
-   
-  
+
+
 
 defineModule :: [Lisp] -> InterpM Lisp
 defineModule [List [file]] = return Void
 
---defineModule (List [dir file]) = 
+--defineModule (List [dir file]) =
 keywords :: [(String, [Lisp] -> InterpM Lisp)]
 keywords =
     [
@@ -194,24 +194,23 @@ keywords =
 
 
 quitProc :: [Lisp] -> InterpM Lisp
-quitProc _ = liftIO $ exitWith ExitSuccess
+quitProc _ = liftIO exitSuccess
 
 
 -- 载入lisp源文件
 loadFile :: String -> InterpM [Lisp]
-loadFile file = (liftIO $ readFile file) >>= readLisp
+loadFile file = liftIO (readFile file) >>= readLisp
 
 --readLines n f = withFile f ReadMode $ replicateM n . hGetLine
 
 -- 载入源文件并转换成Lisp并求值
 loadProc :: [Lisp] -> InterpM Lisp
-loadProc [String file] = do
-    loadFile file >>= mapM_ eval >> return Void
+loadProc [String file] = loadFile file >>= mapM_ eval >> return Void
 loadProc args = throwError $ NumArgs 1 args
 
 -- 调用load并把结果转换成单一的LispVal
 readAll :: [Lisp] -> InterpM Lisp
-readAll [String file] = loadFile file >>= return . List
+readAll [String file] = List <$> loadFile file
 
 -- FIXME
 applyProc :: [Lisp] -> InterpM Lisp
@@ -245,7 +244,7 @@ callcc args = throwError $ NumArgs 2 args
 -- failure-handler有三个参数：第一个是错误消息，第二个是错误发生时的延续以及失败延续
 callfc :: [Lisp] -> InterpM Lisp
 callfc [Lambda thunk, Lambda handler] =
-    (thunk []) `catchError` callHandler
+    thunk [] `catchError` callHandler
     where
       callHandler (RTE message errorCont) = handler [String message, Continuation errorCont, Failure parentFK]
       callHandler e = throwError e
@@ -292,7 +291,7 @@ writeChar [notChar] = throwError $ TypeMismatch "char" notChar
 -- makePort是对haskell中的openFile函数的包装
 makePort :: IOMode -> [Lisp] -> InterpM Lisp
 --makePort ReadMode [] = liftM HPort $ liftIO $ openFile "CONIN$" ReadMode
-makePort mode [String file] = liftM HPort $ liftIO $ openFile file mode
+makePort mode [String file] = fmap HPort $ liftIO $ openFile file mode
 
 closePort :: [Lisp] -> InterpM Lisp
 closePort [HPort port] = liftIO $ hClose port >> return LispTrue
@@ -311,16 +310,16 @@ readString [String str] = do
 -- read函数将Datum解析为内部对象(Lisp)
 readProc :: [Lisp] -> InterpM Lisp
 readProc [] = readProc [HPort stdin] -- 缺省端口
-readProc [HPort port] = (liftIO $ hGetLine port) >>= \s -> readString [String s]
+readProc [HPort port] = liftIO (hGetLine port) >>= \s -> readString [String s]
 
 -- 将Lisp转换为字符串形式的外部表示后写入端口
 writeProc :: [Lisp] -> InterpM Lisp
 writeProc [obj] = writeProc [obj, HPort stdout]  -- 缺省端口
-writeProc [obj, HPort port] = liftIO $ hPrint port obj >> (return LispTrue)
+writeProc [obj, HPort port] = liftIO $ hPrint port obj >> return LispTrue
 
 -- 读取整个文件内容作为Lisp字符串
 readContents :: [Lisp] -> InterpM Lisp
-readContents [String file] = liftM String $ liftIO $ readFile file
+readContents [String file] = fmap String $ liftIO $ readFile file
 
 -- FIXME
 -- (+) => 0
@@ -339,7 +338,7 @@ unpackNum :: Lisp -> ThrowsError Integer
 unpackNum (Fixnum n) = return n
 unpackNum (String n) = let parsed = reads n in
                        if null parsed then throwError $ TypeMismatch "number" $ String n
-                       else return $ fst $ parsed !! 0
+                       else return $ fst $ head parsed
 unpackNum notNum = throwError $ TypeMismatch "number" notNum
 
 -- doubleBinop :: (Double -> Double -> Double) -> [Lisp] -> ThrowsError Lisp
@@ -357,7 +356,7 @@ boolBinop :: (Lisp -> ThrowsError a) -> (a -> a -> Bool) -> [Lisp] -> ThrowsErro
 boolBinop _ _ [] = throwError $ NumArgs 2 []
 boolBinop _ _ args@[x] = throwError $ NumArgs 2 args
 boolBinop unpacker op args = do
-  r <- liftM loop $ mapM unpacker args
+  r <- loop <$> mapM unpacker args
   return $ if r then LispTrue else LispFalse
   where
     loop []       = True
@@ -457,8 +456,8 @@ cdr args = throwError $ NumArgs 1 args
 -- x + List = List
 -- x + DotList = DotList
 cons :: [Lisp] -> ThrowsError Lisp
-cons [a, List b] = return $ List ([a] ++ b)
-cons [a, DotList b c] = return $ DotList ([a] ++ b) c
+cons [a, List b] = return $ List (a:b)
+cons [a, DotList b c] = return $ DotList (a:b) c
 cons [a, b] = return $ DotList [a] b
 cons args = throwError $ NumArgs 2 args
 
@@ -472,7 +471,7 @@ eqv [Fixnum arg1, Fixnum arg2] = return $ if arg1 == arg2 then LispTrue else Lis
 eqv [String arg1, String arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 eqv [Symbol arg1, Symbol arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 eqv [DotList xs x, DotList ys y] = eqv [List $ xs ++ [x], List $ ys ++ [y]]
-eqv [List arg1, List arg2] = return $ if (length arg1 == length arg2) && (and $ map eqvPair $ zip arg1 arg2) then LispTrue else LispFalse
+eqv [List arg1, List arg2] = return $ if (length arg1 == length arg2) && all eqvPair (zip arg1 arg2) then LispTrue else LispFalse
     where eqvPair (x1, x2) = case eqv [x1, x2] of
                                Left err -> False
                                Right LispTrue -> True
@@ -492,7 +491,7 @@ equal [Fixnum arg1, Fixnum arg2] = return $ if arg1 == arg2 then LispTrue else L
 equal [String arg1, String arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 equal [Symbol arg1, Symbol arg2] = return $ if arg1 == arg2 then LispTrue else LispFalse
 equal [DotList xs x, DotList ys y] = equal [List $ xs ++ [x], List $ ys ++ [y]]
-equal [List arg1, List arg2] = return $ if (length arg1 == length arg2) && (and $ map equalPair $ zip arg1 arg2) then LispTrue else LispFalse
+equal [List arg1, List arg2] = return $ if (length arg1 == length arg2) && all equalPair (zip arg1 arg2) then LispTrue else LispFalse
     where equalPair (x1, x2) = case equal [x1, x2] of
                                Left err -> False
                                Right LispTrue -> True
@@ -526,7 +525,7 @@ stringFromCharList :: [Lisp] -> ThrowsError Lisp
 stringFromCharList [Char arg] = return $ String [arg]
 stringFromCharList (Char arg : xs) = do
   String rest <- stringFromCharList xs
-  return $ String $ [arg] ++ rest
+  return $ String $ arg:rest
 
 stringLength :: [Lisp] -> ThrowsError Lisp
 stringLength [String arg] = return $ Fixnum $ toInteger $ length arg
@@ -544,10 +543,10 @@ stringAppend args = do
 
 
 stringRef :: [Lisp] -> ThrowsError Lisp
-stringRef [(String arg0), (Fixnum arg1)] =
+stringRef [String arg0, Fixnum arg1] =
     if arg1 < 0 || arg1 >= toInteger (length arg0)
     then throwError $ Default "String index out of range"
-    else return $ Char $ arg0 !! fromInteger(arg1)
+    else return $ Char $ arg0 !! fromInteger arg1
 
 
 --
@@ -597,7 +596,7 @@ numericOp opcode args = do
 
 numericOp' :: DispatchFunc
 numericOp' opIAdd [] = return $ Fixnum 0
-numericOp' opIAdd args = mapM unpackNum args >>= return . Fixnum . foldl1 (+)
+numericOp' opIAdd args = (Fixnum . sum) <$> mapM unpackNum args
 
 -- 内置的纯函数查询表
 primitives :: [(String, [Lisp] -> ThrowsError Lisp)]
