@@ -87,19 +87,19 @@ setVar [Symbol name, expr] = do
       liftIO $ writeIORef x val
       return Void
 
+-- 只有#f是假值
 ifExp :: [Lisp] -> InterpM Lisp
 ifExp [pred, conseq] = do
   r <- eval pred
   case r of
-    -- 只有#f是假值
     LispFalse -> return Void
-    _         -> eval_tail conseq
+    _         -> evalTail conseq
 
 ifExp [pred, conseq, alt] = do
   r <- eval pred
   case r of
-    LispFalse -> eval_tail alt
-    _         -> eval_tail conseq
+    LispFalse -> evalTail alt
+    _         -> evalTail conseq
 
 
 letExp :: [Lisp] -> InterpM Lisp
@@ -139,7 +139,7 @@ letStarExp (List bindings:body) = do
 -- FIXME 顶层begin中的define应该绑定在顶层环境
 beginExp :: [Lisp] -> InterpM Lisp
 beginExp [] = return Void
-beginExp lst = eval_tail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
+beginExp lst = evalTail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
 
 
 -- (define-syntax ...)

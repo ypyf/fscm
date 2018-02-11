@@ -1,4 +1,4 @@
-module Scheme.Eval (eval, eval_tail, apply) where
+module Scheme.Eval (eval, evalTail, apply) where
 
 import Scheme.Types
 import Scheme.Variables
@@ -86,17 +86,17 @@ mkClosure locals upvalues body = do
     f (SC r) = TC (SC locals) upvalues (SC r)
     f r@TC{} = TC (SC locals) upvalues r   -- 注意环境合并的顺序
     closure :: [Lisp] -> InterpM Lisp
-    closure [x] = eval_tail x
+    closure [x] = evalTail x
     closure (x:xs) = eval x >> closure xs
 
 
 -- 用于尾部表达式的求值(尾调用优化)
-eval_tail :: Lisp -> InterpM Lisp
-eval_tail expr@(List (x:xs)) =
+evalTail :: Lisp -> InterpM Lisp
+evalTail expr@(List (x:xs)) =
   case x of
     Symbol "lambda" -> eval expr
-    _               -> eval x >>= \fn -> apply_tail (fn:xs)
-eval_tail expr = eval expr
+    _               -> eval x >>= \fn -> applyTail (fn:xs)
+evalTail expr = eval expr
 
 -- apply
 -- 函数应用前必须先对参数求值
@@ -112,7 +112,7 @@ apply (Continuation k:xs) = do
   case v of
     []  -> k Void
     [x] -> k x
-    -- 多值 FIXME
+    --FIXME 多值
     xs  -> mapM_ (fmap k . eval) xs >> return Void
 apply (Func fn:xs) = do
   v <- mapM eval xs
@@ -124,7 +124,7 @@ apply (x:xs) = do
   throwError $ Default $ "expected procedure, given: " ++ show x ++ "; arguments were: " ++ unwordsList xs
 
 
-apply_tail :: [Lisp] -> InterpM Lisp
+applyTail :: [Lisp] -> InterpM Lisp
 -- 尾部的函数应用只对参数在当前作用域内求值，然后返回尾调用对象
-apply_tail (Lambda func:xs) = mapM eval xs >>= \v -> return $ List $ TailCall func : v
-apply_tail expr = apply expr
+applyTail (Lambda func:xs) = mapM eval xs >>= \v -> return $ List $ TailCall func : v
+applyTail expr = apply expr
