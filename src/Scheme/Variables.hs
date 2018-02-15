@@ -6,7 +6,7 @@ import Data.IORef
 import qualified Data.Map.Strict as M
 
 -- 在环境中查找绑定的符号
-getValue :: String -> Context -> Maybe (IORef Lisp)
+getValue :: String -> Context -> Maybe (IORef LispVal)
 getValue name (SC r) = M.lookup name r
 getValue name (TC locals upvalues r) =
   case getValue name locals of

@@ -13,7 +13,7 @@ import Control.Monad.State.Lazy
 import qualified Data.Map.Strict as M
 
 
-eval :: Lisp -> InterpM Lisp
+eval :: LispVal -> InterpM LispVal
 eval (Symbol name) = do
   r <- ask
   case getValue name r of
@@ -71,10 +71,10 @@ eval (List (x:xs)) = eval x >>= \fn -> apply (fn:xs)
 eval val = return val
 --eval form = throwError $ BadSpecialForm "unrecognized special form" form
 
-mkClosure :: M.Map String (IORef Lisp)
+mkClosure :: M.Map String (IORef LispVal)
             -> Context
-            -> [Lisp]
-            -> InterpM Lisp
+            -> [LispVal]
+            -> InterpM LispVal
 mkClosure locals upvalues body = do
   --let keys = M.keys upvalues
   --trace (show keys) $ do
@@ -85,13 +85,13 @@ mkClosure locals upvalues body = do
   where
     f (SC r) = TC (SC locals) upvalues (SC r)
     f r@TC{} = TC (SC locals) upvalues r   -- 注意环境合并的顺序
-    closure :: [Lisp] -> InterpM Lisp
+    closure :: [LispVal] -> InterpM LispVal
     closure [x] = evalTail x
     closure (x:xs) = eval x >> closure xs
 
 
 -- 用于尾部表达式的求值(尾调用优化)
-evalTail :: Lisp -> InterpM Lisp
+evalTail :: LispVal -> InterpM LispVal
 evalTail expr@(List (x:xs)) =
   case x of
     Symbol "lambda" -> eval expr
@@ -101,12 +101,12 @@ evalTail expr = eval expr
 -- apply
 -- 函数应用前必须先对参数求值
 -- 语法关键词（特殊形式）不对参数求值
-apply :: [Lisp] -> InterpM Lisp
+apply :: [LispVal] -> InterpM LispVal
 apply (IOFunc func:xs) = mapM eval xs >>= func
 apply (Lambda func:xs) = mapM eval xs >>= func
 apply (HFunc func:xs)  = mapM eval xs >>= func
 apply (Syntax f:xs) = f xs
-apply (Failure failure:xs) = mapM eval xs >>= \[String message, Continuation ok] -> failure message ok
+-- apply (Failure failure:xs) = mapM eval xs >>= \[String message, Continuation ok] -> failure message ok
 apply (Continuation k:xs) = do
   v <- mapM eval xs
   case v of
@@ -124,7 +124,7 @@ apply (x:xs) = do
   throwError $ Default $ "expected procedure, given: " ++ show x ++ "; arguments were: " ++ unwordsList xs
 
 
-applyTail :: [Lisp] -> InterpM Lisp
+applyTail :: [LispVal] -> InterpM LispVal
 -- 尾部的函数应用只对参数在当前作用域内求值，然后返回尾调用对象
 applyTail (Lambda func:xs) = mapM eval xs >>= \v -> return $ List $ TailCall func : v
 applyTail expr = apply expr

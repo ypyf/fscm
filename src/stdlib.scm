@@ -1,6 +1,6 @@
 ; Continuation
 (define call/cc call-with-current-continuation)
-(define call/fc call-with-failure-continuation)
+;(define call/fc call-with-failure-continuation)
 
 (define (not x) (if x #f #t))
 (define (null? obj) (if (eqv? obj '()) #t #f))

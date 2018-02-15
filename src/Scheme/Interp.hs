@@ -27,14 +27,14 @@ defaultEnv = do
 --pio_interaction_environment [] = return $ Environment builtins
 
 -- 绑定内置函数(常量)到环境
-primitiveBindings :: [(String, Lisp)]
+primitiveBindings :: [(String, LispVal)]
 primitiveBindings = [(k, v) | (k, f) <- primitives, let v = Func f]
 
-primitiveIoBindings :: [(String, Lisp)]
+primitiveIoBindings :: [(String, LispVal)]
 primitiveIoBindings = [(k, v) | (k, f) <- primitivesIo, let v = IOFunc f]
 
 -- 语法关键词(特殊形式)
-syntaxBindings :: [(String, Lisp)]
+syntaxBindings :: [(String, LispVal)]
 syntaxBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
 
 
@@ -46,11 +46,11 @@ prompt str = putStr str >> hFlush stdout
 runREPL :: IO ()
 runREPL = defaultEnv >>= \r -> runInterp r looper
  where
-   looper :: InterpM Lisp
+   looper :: InterpM LispVal
    looper = do
      loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
      forever $ liftIO (prompt "> ") >> interp
-   interp :: InterpM Lisp
+   interp :: InterpM LispVal
    interp = do
      -- TODO 检查语法后再调用readLisp
      x <- readProc [] `catchError` readerErrorHandler
@@ -59,7 +59,7 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
        Void -> return Void
        _    -> liftIO (print r) >> return Void
 
-runInterp :: Env -> InterpM Lisp -> IO ()
+runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
   v <- runExceptT $ runReaderT (evalContT interp) (SC env)
   case v of
@@ -67,7 +67,7 @@ runInterp env interp = do
     Right _ -> return ()
 
 -- just like (eval (read-string str))
-evalString :: String -> InterpM Lisp
+evalString :: String -> InterpM LispVal
 evalString str = do
   x <- readString [String str]
   r <- evalProc [x]
@@ -80,18 +80,18 @@ runOnce :: [String] -> IO ()
 runOnce [arg] = defaultEnv >>= \r -> runInterp r $ loadProc [String arg]  -- 执行脚本文件
 runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
   where
-    once :: InterpM Lisp
+    once :: InterpM LispVal
     once = loadProc [String "stdlib.scm"] >> evalString exprs
 runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
 
-errorHandler :: LispError -> InterpM Lisp
+errorHandler :: LispError -> InterpM LispVal
 errorHandler e = liftIO (print e) >> return Void
 
-loaderErrorHandler :: LispError -> InterpM Lisp
+loaderErrorHandler :: LispError -> InterpM LispVal
 loaderErrorHandler e = liftIO (putStrLn $ "load: " ++ show e) >> return Void
 
-readerErrorHandler :: LispError -> InterpM Lisp
+readerErrorHandler :: LispError -> InterpM LispVal
 readerErrorHandler e = liftIO (putStrLn $ "read: " ++ show e) >> return Void
 
 -- TODO 处理Haskell内置异常

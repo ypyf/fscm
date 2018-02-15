@@ -93,7 +93,7 @@ SInt10 : uint10					{ $1 }
 Int10 : SInt10					{ VInt (read $1 ::Integer) }
 	  | radix10 SInt10			{ VInt (read $2 ::Integer) }
 	  | prefix10_e SInt10 ManyS	{ VInt (read $2 * 10^$3) }
-	  
+
 ManyS : {- empty -} 			{ 0 }
       |	'#' ManyS				{ 1 + $2 }
 
@@ -111,7 +111,7 @@ parseError :: [Token] -> ParseError a
 parseError (T p tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn p ++ ": " ++ lexeme
 parseError _                   = Left "syntax error"
 
-readLisp :: String -> InterpM [Lisp]
+readLisp :: String -> InterpM [LispVal]
 readLisp input =
     case scanner input of
         Left x -> throwError $ ParseError x

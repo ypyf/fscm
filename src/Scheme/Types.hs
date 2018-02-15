@@ -18,48 +18,48 @@ import Control.Monad.State.Lazy
 import Control.Monad.Trans.Cont
 
 
--- value list helper
-unwordsList :: [Lisp] -> String
+-- | value list helpervalue list helper
+unwordsList :: [LispVal] -> String
 unwordsList = unwords . map show
 
 type ThrowsError = Either LispError
 
-type Future = Lisp -- 续体的返回类型，但在对象语言中续体从不返回
+type Future = LispVal -- 续体的返回类型，但在对象语言中续体从不返回
 
 -- 表达式求值的结果类型
-data Lisp = Nil
-          | Void  -- 有副作用的函数返回的未定义值
-          | EOF
-          | Symbol !String
-          | Fixnum !Integer
-          | String !String
-          | Char !Char
-          | LispTrue
-          | LispFalse
-          | DotList ![Lisp] !Lisp  -- 非严格表
-          | List ![Lisp]
-          | Vector ![Lisp] -- TODO []换成Array
-          | Func !([Lisp] -> ThrowsError Lisp) -- 纯的内置函数
-          | IOFunc !([Lisp] -> InterpM Lisp)  -- 有IO副作用的内置函数
-          | Lambda !([Lisp] -> InterpM Lisp)  -- 自定义函数 这些类型看似相同，但不应该合并，因为要处理尾递归
-          | HFunc !([Lisp] -> InterpM Lisp) -- Haskell函数
-          -- | CFunc !
-          | TailCall !([Lisp] -> InterpM Lisp)  -- 尾调用
-          | Continuation !(Lisp -> InterpM Future)
-          | Failure !(String -> (Lisp -> InterpM Future) -> InterpM Future) -- 失败继续 参数：(message, error-cont)
-          | Syntax !([Lisp] -> InterpM Lisp) -- 特殊语法形式，比如define,if等
-          | HPort !Handle -- IO函数使用的端口
-          | Environment !Env -- 环境
-          | Module String -- 模块
-          | Transformer ([Lisp] -> [Lisp])
+data LispVal
+    = Nil
+    | Void  -- 有副作用的函数返回的未定义值
+    | EOF
+    | Symbol String
+    | Fixnum Integer
+    | String String
+    | Char Char
+    | LispTrue
+    | LispFalse
+    | DotList [LispVal] LispVal  -- 非严格表
+    | List [LispVal]
+    | Vector ![LispVal] -- TODO []换成Array
+    | Func ([LispVal] -> ThrowsError LispVal) -- 纯的内置函数
+    | IOFunc ([LispVal] -> InterpM LispVal)  -- 有IO副作用的内置函数
+    | Lambda ([LispVal] -> InterpM LispVal)  -- 自定义函数 这些类型看似相同，但不应该合并，因为要处理尾递归
+    | HFunc ([LispVal] -> InterpM LispVal) -- Haskell函数
+    | TailCall ([LispVal] -> InterpM LispVal)  -- 尾调用
+    | Continuation (LispVal -> InterpM Future)
+    --   | Failure (String -> (LispVal -> InterpM Future) -> InterpM Future) -- 失败继续 参数：(message, error-cont)
+    | Syntax ([LispVal] -> InterpM LispVal) -- 特殊语法形式，比如define,if等
+    | HPort Handle -- IO函数使用的端口
+    | Environment Env -- 环境
+    | Module String -- 模块
+    | Transformer ([LispVal] -> [LispVal])
 
-instance Show Lisp where show = showVal
+instance Show LispVal where show = showVal
 --showVal (Ratio x) = show (numerator x) ++ "%" ++ show (denominator x)
-showVal :: Lisp -> String
+showVal :: LispVal -> String
 showVal Nil = "nil"
 showVal Void = []
 showVal (Continuation _) = "#<continuation>"
-showVal (Failure _) = "#<failure-continuation>"
+-- showVal (Failure _) = "#<failure-continuation>"
 showVal (Func _) = "#<procedure>"
 showVal (IOFunc _) = "#<procedure>"
 showVal (Lambda _) = "#<procedure>"
@@ -111,33 +111,33 @@ showVal x = "#<Lisp Type>"  -- debug only
 
 
 -- 环境
-type Env = M.Map String (IORef Lisp)
+type Env = M.Map String (IORef LispVal)
 
 -- 环境 | 参数 闭包 环境
 data Context = SC !Env | TC Context Context Context
 
 -- 存储
-type Store = M.Map String Lisp
+type Store = M.Map String LispVal
 
 instance MonadError e m => MonadError e (ContT r m) where
     throwError = lift . throwError
     m `catchError` h = ContT $ \c -> runContT m c `catchError` \e -> runContT (h e) c
 
 -- 解释器单子
-type InterpM = ContT Lisp (ReaderT Context (ExceptT LispError IO))
+type InterpM = ContT LispVal (ReaderT Context (ExceptT LispError IO))
 
 
 -- 解释器错误
 data LispError
-    = NumArgs Int [Lisp]
+    = NumArgs Int [LispVal]
     | ZeroDivision
-    | TypeMismatch String Lisp
+    | TypeMismatch String LispVal
     | ParseError String
-    | BadSpecialForm String Lisp
+    | BadSpecialForm String LispVal
     | NotFunction String String
     | UnboundName String
     | Default String
-    | RTE !String !(Lisp -> InterpM Future)
+    | RTE !String !(LispVal -> InterpM Future)
 
 showError :: LispError -> String
 showError ZeroDivision = "division by zero"
@@ -156,6 +156,10 @@ showError (RTE message errorConkt) = message
 
 instance Show LispError where show = showError
 
--- | 空列表
-nil :: Lisp
-nil = List []
+-- | 空表
+emptyList :: LispVal
+emptyList = List []
+
+-- | 空串
+emptyString :: LispVal
+emptyString = String []
