@@ -521,11 +521,16 @@ makeString' k c = let x = c : x in
                   if k >= 0 then return $ String $ take k x
                   else throwError $ Default "expects argument of type <non-negative exact integer>"
 
+-- (string) => ""
+-- (string #\a) => "a"
+-- (string #\a #\b) => "ab"
 stringFromCharList :: [Lisp] -> ThrowsError Lisp
+stringFromCharList [] = return $ String []
 stringFromCharList [Char arg] = return $ String [arg]
 stringFromCharList (Char arg : xs) = do
   String rest <- stringFromCharList xs
   return $ String $ arg:rest
+stringFromCharList [args] = throwError $ TypeMismatch "Char" args
 
 stringLength :: [Lisp] -> ThrowsError Lisp
 stringLength [String arg] = return $ Fixnum $ toInteger $ length arg
