@@ -1,4 +1,4 @@
-module Scheme.Interp (defaultEnv, runInterp, runREPL, runOnce) where
+module Scheme.Interp (defaultEnv, runInterp, evalString, runREPL, runOnce) where
 
 import Scheme.Types
 import Scheme.Primitives
