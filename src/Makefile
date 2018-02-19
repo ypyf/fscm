@@ -1,7 +1,7 @@
 # Makefile for building FSCM
 
 # +RTS option: -prof -auto-all
-SRC = Main.hs Scheme/Interp.hs Scheme/Eval.hs Scheme/Types.hs Scheme/Primitives.hs Scheme/Variables.hs Scheme/Scan.hs Scheme/Parser.hs
+SRC = Main.hs Scheme/Interp.hs Scheme/Eval.hs Scheme/Types.hs Scheme/Primitives.hs Scheme/Scan.hs Scheme/Parser.hs
 EXE = fscm.exe
 
 all: fscm

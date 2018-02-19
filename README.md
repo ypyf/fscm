@@ -1,18 +1,18 @@
-#FSCM
+## FSCM
 
 A Scheme (programming language) interpreter
 
 
-##Build & Run
+## Build & Run
     cd fscm/src
     make
     ./fscm.exe
 
-##Installing via Cabal package
+## Install via Cabal package
     cd fscm
     cabal install
 
-##TODO
+## TODO
 
 * Number tower
 * Macro
@@ -20,6 +20,6 @@ A Scheme (programming language) interpreter
 * Native code generation
 * ...
 
-##Contributing
+## Contributing
 
 Pull Requests Welcome!

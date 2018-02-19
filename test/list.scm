@@ -6,9 +6,11 @@
 ((lambda (quote if) (quote if)) list 1) 
 
 ; 闭包作用域测试
+; => 2 ok
+; => 3 error
 (define func +)
 (define (foo func) (lambda (a b) (func a b)))
-((foo *) 1 2) ; => 2
+((foo *) 1 2)
 
 (define (foo) (lambda (a b) (func a b)))
 ((foo) 1 2) ; => 错误: func未定义

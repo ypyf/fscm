@@ -1,5 +1,5 @@
 ;; => let: bad syntax in: (+ a b)
-;(let ((a 1) (b (+ 1 2)) (+ a b)))
+(let ((a 1) (b (+ 1 2)) (+ a b)))
 
 
 ;; => (a b c) 
@@ -14,6 +14,7 @@
 
 ; 错误 lambda中的egg未定义
 (let ((egg 100)(fn (lambda (x) (+ x egg)))) (fn 2))
+
 ; 正确  ==> 102
 (letrec ((cow 100)(fn (lambda (x) (+ x cow)))) (fn 2))
 (let* ((a 100)(fn (lambda (x) (+ x a)))) (fn 2))
@@ -65,6 +66,7 @@
 	(b (* a 2))
 	(c (- b 3)))
 	c)
+    
 ; ==> 199
 (let* ((a (let* ((t 100)) (+ t 1)))
 	(b (* a 2))
@@ -81,8 +83,6 @@
 (let ((a 100) (b 20)) 
 	(let ((a b)(b a)) 
 		(- a b)))
-			
-; 正确	==> 7
 
 ; ==> 70	
 (let ((x 2) (y 3))

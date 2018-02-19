@@ -13,9 +13,6 @@ import Control.Monad.Trans.Cont
 import Control.Monad.State.Lazy
 import qualified Data.Map.Strict as M
 
--- 缺省存储
-emptyStore :: Store
-emptyStore = M.empty
 
 -- 缺省环境
 defaultEnv :: IO Env
@@ -44,7 +41,7 @@ prompt str = putStr str >> hFlush stdout
 -- 运行REPL解释器
 -- TODO 使用Scheme本身去写REPL
 runREPL :: IO ()
-runREPL = defaultEnv >>= \r -> runInterp r looper
+runREPL = defaultEnv >>= \e -> runInterp e looper
  where
    looper :: InterpM LispVal
    looper = do
@@ -56,12 +53,12 @@ runREPL = defaultEnv >>= \r -> runInterp r looper
      x <- readProc [] `catchError` readerErrorHandler
      r <- evalProc [x] `catchError` errorHandler
      case r of
-       Void -> return Void
-       _    -> liftIO (print r) >> return Void
+      Undefined -> return Undefined
+      _         -> liftIO (print r) >> return Undefined
 
 runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
-  v <- runExceptT $ runReaderT (evalContT interp) (SC env)
+  v <- runExceptT $ runReaderT (runStateT (evalContT interp) env) env
   case v of
     Left e  -> print e  -- 打印错误消息
     Right _ -> return ()
@@ -72,13 +69,13 @@ evalString str = do
   x <- readString [String str]
   r <- evalProc [x]
   case r of
-    Void -> return Void
-    _    -> liftIO (print r) >> return Void
+    Undefined -> return Undefined
+    _    -> liftIO (print r) >> return Undefined
 
 -- 以命令行参数方式运行
 runOnce :: [String] -> IO ()
-runOnce [arg] = defaultEnv >>= \r -> runInterp r $ loadProc [String arg]  -- 执行脚本文件
-runOnce ("-e":exprs:_) = defaultEnv >>= \r -> runInterp r once
+runOnce [arg] = defaultEnv >>= \e -> runInterp e $ loadProc [String arg]  -- 执行脚本文件
+runOnce ("-e":exprs:_) = defaultEnv >>= \e -> runInterp e once
   where
     once :: InterpM LispVal
     once = loadProc [String "stdlib.scm"] >> evalString exprs
@@ -86,13 +83,13 @@ runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
 
 errorHandler :: LispError -> InterpM LispVal
-errorHandler e = liftIO (print e) >> return Void
+errorHandler e = liftIO (print e) >> return Undefined
 
 loaderErrorHandler :: LispError -> InterpM LispVal
-loaderErrorHandler e = liftIO (putStrLn $ "load: " ++ show e) >> return Void
+loaderErrorHandler e = liftIO (putStrLn $ "load: " ++ show e) >> return Undefined
 
 readerErrorHandler :: LispError -> InterpM LispVal
-readerErrorHandler e = liftIO (putStrLn $ "read: " ++ show e) >> return Void
+readerErrorHandler e = liftIO (putStrLn $ "read: " ++ show e) >> return Undefined
 
 -- TODO 处理Haskell内置异常
 handler :: ArithException -> IO ()

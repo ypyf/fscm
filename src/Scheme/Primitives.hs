@@ -7,7 +7,6 @@ module Scheme.Primitives
 import Scheme.Types
 import Scheme.Parser
 import Scheme.Eval
-import Scheme.Variables
 
 import Debug.Trace
 import System.Exit
@@ -19,7 +18,7 @@ import qualified Data.Map.Strict as M
 import Data.Foldable (foldlM)
 import Control.Monad
 import Control.Monad.Reader
-import Control.Monad.Error
+import Control.Monad.Except
 import Control.Monad.State.Lazy
 import Control.Monad.Trans.Cont
 import Control.Concurrent (threadDelay)
@@ -40,31 +39,29 @@ time (x:xs) = do
 time _ = throwError $ Default "time: bad syntax"
 
 bench :: [LispVal] -> InterpM LispVal
-bench _ = return Void
+bench _ = return Undefined
 
 quote :: [LispVal] -> InterpM LispVal
 quote [datum] = return datum
 quote args = throwError $ NumArgs 1 args
 
--- 参见 r5rs 5.2.1
+-- 顶层定义 r5rs 5.2.1
 -- FIXME 只能出现在顶层或<body>的开始
+-- TODO 出现在<body>中的属于内部定义,可以变换为等价的letrec绑定
+-- define类似于letrec，允许闭包的递归定义，所以先设定一个临时的初值
+-- 在修改后的环境中执行后续计算
 defineVar :: [LispVal] -> InterpM LispVal
 defineVar [Symbol name, expr] = do
-  r <- ask
-  case getValue name r of
-    Nothing -> do
-      -- define类似于letrec，允许闭包的递归定义，所以先设定一个临时的初值
-      -- 在修改后的环境中执行后续计算
-      tmp <- liftIO $ newIORef Void
-      callCC $ \k -> local (insert tmp) (def tmp >>= k)
-    -- 重定义变量
-    Just x -> def x >> return Void
+  env <- ask   -- FIXME get TopEnv
+  case M.lookup name env of
+      Nothing -> do
+        tmp <- liftIO $ newIORef Undefined
+        callCC $ \k -> local (M.insert name tmp) (def tmp >>= k)
+      -- 重定义变量
+      Just var -> def var
   where
-    insert :: IORef LispVal -> Context -> Context
-    insert v (SC r) = SC $ M.insert name v r
-    insert v (TC locals upvalues r) = TC (insert v locals) upvalues r
-    def :: IORef LispVal -> InterpM LispVal
-    def ref = eval expr >>= liftIO . writeIORef ref >> return Void
+      def :: IORef LispVal -> InterpM LispVal
+      def var = eval expr >>= liftIO . writeIORef var >> return Undefined
 
 -- (define (name...) ...)
 defineVar (List (Symbol name:xs):body) =
@@ -76,23 +73,24 @@ defineVar (DotList (Symbol name:xs) varg:body) =
 defineVar _ = throwError $ Default "define: bad syntax"
 
 
+-- (set! name expr)
 setVar :: [LispVal] -> InterpM LispVal
 setVar [Symbol name, expr] = do
   -- TODO 不可赋予Void(undefined)值
   val <- eval expr  -- 注意首先对expr求值
-  r <- ask
-  case getValue name r of
+  env <- ask
+  case M.lookup name env of
     Nothing -> throwError $ UnboundName name
     Just x -> do
       liftIO $ writeIORef x val
-      return Void
+      return Undefined
 
 -- 只有#f是假值
 ifExp :: [LispVal] -> InterpM LispVal
 ifExp [pred, conseq] = do
   r <- eval pred
   case r of
-    LispFalse -> return Void
+    LispFalse -> return Undefined
     _         -> evalTail conseq
 
 ifExp [pred, conseq, alt] = do
@@ -101,14 +99,15 @@ ifExp [pred, conseq, alt] = do
     LispFalse -> evalTail alt
     _         -> evalTail conseq
 
-
+-- 局部绑定
+-- 变换为等价的函数应用
 letExp :: [LispVal] -> InterpM LispVal
-letExp (List bindings:body) = do
+letExp (List bindings:bodys) = do
   x <- unpack bindings
   let pairs = unzip x
       keys = fst pairs -- params
       values = snd pairs   -- args
-  eval $ List (List (Symbol "lambda":List keys:body):values)
+  eval $ List (List (Symbol "lambda":List keys:bodys):values)
   where
     unpack :: [LispVal] -> InterpM [(LispVal, LispVal)]
     unpack [] = return []
@@ -117,28 +116,17 @@ letExp (List bindings:body) = do
       return $ (x, v) : xs'
     unpack (x:_) = throwError $ BadSpecialForm "let" x
 
-letStarExp :: [LispVal] -> InterpM LispVal
-letStarExp (List bindings:body) = do
-    x <- unpack bindings
-    let pairs = unzip x
-        keys = fst pairs
-        values = snd pairs
-    eval $ List $ foo x
-    where
-        unpack :: [LispVal] -> InterpM [(LispVal, LispVal)]
-        unpack [] = return []
-        unpack (List [x, v]:xs) = do
-            xs' <- unpack xs
-            return $ (x, v) : xs'
-        unpack (x:_) = throwError $ BadSpecialForm "let*" x
-        foo :: [(LispVal, LispVal)] -> [LispVal]
-        foo [] = [List (Symbol "lambda":List []:body)]
-        foo ((k,v):xs) = List [Symbol "lambda",List [k],List (foo xs)]:[v]
+-- let* 可以变换为等价的let形式
+letStar :: [LispVal] -> InterpM LispVal
+letStar (List []:bodys) = eval $ List $ Symbol "let":List []:bodys
+letStar (List (binding:rest):bodys) = eval $ List $ Symbol "let":List [binding]:List (Symbol "let*":List rest:bodys):[]
+letStar [] = throwError $ BadSpecialForm "let*" $ String "(let*)"
+letStar [args] = throwError $ BadSpecialForm "let*" $ args
 
 -- (begin e1 e2 ...) => ((lambda () e1 e2 ...))
 -- FIXME 顶层begin中的define应该绑定在顶层环境
 beginExp :: [LispVal] -> InterpM LispVal
-beginExp [] = return Void
+beginExp [] = return Undefined
 beginExp lst = evalTail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
 
 
@@ -148,7 +136,7 @@ beginExp lst = evalTail $ List [List $ Symbol "lambda":List []:lst]  -- 这里�
 -- 转换器的输入是一组规则和S表达式
 -- 输出是转换后的S表达式
 defineSyntax :: [LispVal] -> InterpM LispVal
-defineSyntax [Symbol name, syntax] = return Void
+defineSyntax [Symbol name, syntax] = return Undefined
 --  let List (Symbol "syntax-rules":List ids:rules) = syntax
 --  return $ Transformer $ t rules
 --  where
@@ -168,7 +156,7 @@ defineSyntax [Symbol name, syntax] = return Void
 
 
 defineModule :: [LispVal] -> InterpM LispVal
-defineModule [List [file]] = return Void
+defineModule [List [file]] = return Undefined
 
 --defineModule (List [dir file]) =
 keywords :: [(String, [LispVal] -> InterpM LispVal)]
@@ -177,7 +165,7 @@ keywords =
      ("define-syntax", defineSyntax),
      ("quote", quote),
      ("let", letExp),
-     ("let*", letStarExp),
+     ("let*", letStar),
      ("begin", beginExp),
      ("if", ifExp),
      ("define", defineVar),
@@ -205,7 +193,7 @@ loadFile file = liftIO (readFile file) >>= readLisp
 
 -- 载入源文件并转换成Lisp并求值
 loadProc :: [LispVal] -> InterpM LispVal
-loadProc [String file] = loadFile file >>= mapM_ eval >> return Void
+loadProc [String file] = loadFile file >>= mapM_ eval >> return Undefined
 loadProc args = throwError $ NumArgs 1 args
 
 -- 调用load并把结果转换成单一的LispVal
@@ -228,13 +216,13 @@ evalProc :: [LispVal] -> InterpM LispVal
 evalProc [datum] = do
   ret <- eval datum
   case ret of  -- 处理顶层尾调用
-    List (TailCall func:v) -> func v
-    _                      -> return ret
+    List (func@(TailCall {}):args) -> apply func args
+    _                              -> return ret
 evalProc args = throwError $ NumArgs 1 args
 
 -- call-with-current-continuation
 callcc :: [LispVal] -> InterpM LispVal
-callcc [fn] = callCC $ \k -> apply [fn, Continuation k]
+callcc [fn] = callCC $ \k -> apply fn [Continuation k]
 callcc args = throwError $ NumArgs 2 args
 
 
@@ -258,8 +246,8 @@ callcc args = throwError $ NumArgs 2 args
 
 -- (flush-output)
 flushOutputProc :: [LispVal] -> InterpM LispVal
-flushOutputProc [] = liftIO $ hFlush stdout >> return Void
-flushOutputProc _ = return Void -- TODO 加入端口参数
+flushOutputProc [] = liftIO $ hFlush stdout >> return Undefined
+flushOutputProc _ = return Undefined -- TODO 加入端口参数
 
 currentInputPort :: [LispVal] -> InterpM LispVal
 currentInputPort [] = return $ HPort stdin
@@ -273,8 +261,8 @@ currentOutputPort args = throwError $ NumArgs 0 args
 display :: [LispVal] -> InterpM LispVal
 -- TODO 端口没有指定时应该获取当前端口
 display [val] = display [val, HPort stdout]
-display [val, HPort port] = display' val port >> return Void
-display args = callCC $ \k -> throwError $ RTE "1 arg expected." k
+display [val, HPort port] = display' val port >> return Undefined
+display args = throwError $ NumArgs 1 args
 
 display' :: LispVal -> Handle -> InterpM ()
 display' (String s) port = liftIO $ hPutStr port s
@@ -303,7 +291,7 @@ readString [] = throwError $ NumArgs 1 []
 readString [String str] = do
   r <- readLisp str
   case r of
-    [] -> return Void
+    [] -> return Undefined
     x:xs -> return x -- TODO rest部分应该缓存，下一次继续读
 
 -- read函数
@@ -436,7 +424,7 @@ isChar args = throwError $ NumArgs 1 args
 isProcedure :: [LispVal] -> ThrowsError LispVal
 isProcedure [Func _] = return LispTrue
 isProcedure [IOFunc _] = return LispTrue
-isProcedure [Lambda _] = return LispTrue
+isProcedure [Closure {}] = return LispTrue
 isProcedure [_] = return LispFalse
 isProcedure args = throwError $ NumArgs 1 args
 
@@ -559,23 +547,18 @@ stringRef [String arg0, Fixnum arg1] =
 --
 
 sleepProc :: [LispVal] -> InterpM LispVal
-sleepProc [Fixnum n] = liftIO $ threadDelay (fromInteger n * 1000000) >> return Void
+sleepProc [Fixnum n] = liftIO $ threadDelay (fromInteger n * 1000000) >> return Undefined
 sleepProc args = throwError $ NumArgs 1 args
 
 
---- 错误处理
-errorProc :: [LispVal] -> InterpM LispVal
-errorProc [String message] = callCC $ \k -> throwError $ RTE message k
-errorProc args = throwError $ NumArgs 1 args
-
------- 内存管理
+-- 内存管理
 collectGarbage :: [LispVal] -> InterpM LispVal
-collectGarbage [] = liftIO performGC >> return Void
+collectGarbage [] = liftIO performGC >> return Undefined
 collectGarbage args = throwError $ NumArgs 0 args
 
 idiv :: Integer -> Integer -> InterpM LispVal
 idiv a 0 = throwError ZeroDivision
-idiv a b = return Void
+idiv a b = return Undefined
 
 type Opcode = Int
 type DispatchFunc = Opcode -> [LispVal] -> ThrowsError LispVal
@@ -680,8 +663,7 @@ primitivesIo =
      -- 控制
      ("sleep", sleepProc),
      ("collect-garbage", collectGarbage),
-     ("quit", quitProc),
-     ("error", errorProc)
+     ("quit", quitProc)
 
      -- 互操作
      --("load-ffi", loadHaskellFunction)

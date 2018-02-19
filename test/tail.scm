@@ -35,7 +35,6 @@
 
 ;; (+ 1 2 3 (j 1 2))
 
-;; ”–Œ Ã‚
 (define count 0)
 (define jj (lambda () 
 	(if (< count 1000000)
