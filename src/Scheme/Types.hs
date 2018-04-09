@@ -38,6 +38,7 @@ data LispVal
     | DotList [LispVal] LispVal  -- 非严格表
     | List [LispVal]
     | Vector [LispVal] -- TODO []换成Array
+    | Slice [LispVal] -- unquote-splicing
     | Closure { params :: [String]
               , vararg :: Maybe String
               , body :: [LispVal]

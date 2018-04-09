@@ -1,0 +1,6 @@
+{
+    "files.exclude": {
+        "**/*.hi": true,
+        "**/*.o": true,
+    }
+}

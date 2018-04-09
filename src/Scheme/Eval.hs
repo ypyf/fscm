@@ -1,4 +1,4 @@
-module Scheme.Eval (eval, evalTail, apply) where
+module Scheme.Eval (eval, evalqq, evalTail, apply) where
 
 import Scheme.Types
 
@@ -43,7 +43,7 @@ eval (List (Symbol "lambda":dl@(DotList params (Symbol vararg)):body)) =
 eval form@(DotList s0 s1) = throwError $ Default $ "illegal use of `.' in: " ++ show form
 
 -- function apply
-eval (List []) = throwError $ Default "missing procedure expression."
+eval (List []) = throwError $ Default "missing procedure expression"
 eval (List (x:xs)) = do
   fn <- eval x
   case fn of
@@ -52,6 +52,32 @@ eval (List (x:xs)) = do
 
 eval val = return val
 
+
+evalqq :: Int -> LispVal -> InterpM LispVal
+evalqq _ (List [Symbol "unquote", expr]) = eval expr
+evalqq _ (List [Symbol "unquote-splicing", _]) = throwError $ Default "unquote-splicing: invalid context within quasiquote"
+evalqq level (List v) = do
+  r <- mapM (evalqq' level) v
+  return $ List $ concat $ map f r
+  where
+    f :: LispVal -> [LispVal]
+    f x =
+      case x of
+        Slice s -> s
+        _       -> [x]
+evalqq _ expr = return expr
+
+evalqq' :: Int -> LispVal -> InterpM LispVal
+evalqq' level v@(List [Symbol "quasiquote", expr]) = evalqq (level+1) v
+evalqq' level v@(List [Symbol "unquote-splicing", expr])
+  | level == 0 = eval expr >>= splice
+  | otherwise = return v
+  where
+    splice :: LispVal -> InterpM LispVal
+    splice (List lst) = return $ Slice lst
+    splice notList = throwError $ TypeMismatch "list?" notList
+evalqq' level expr@(List _) = evalqq level expr
+evalqq' _ expr = return expr
 
 -- 用于尾部表达式的求值(尾调用优化)
 evalTail :: LispVal -> InterpM LispVal
