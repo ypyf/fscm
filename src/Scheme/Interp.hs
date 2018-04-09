@@ -73,14 +73,19 @@ evalString str = do
     _    -> liftIO (print r) >> return Undefined
 
 -- 以命令行参数方式运行
+-- 显示版本号 fscm -v
+-- 执行文件中的程序 fscm path/to/program
+-- 执行程序前不加载标准库 fscm -x path/to/program
+-- 执行但行代码 fscm -e "program"
 runOnce :: [String] -> IO ()
-runOnce [arg] = defaultEnv >>= \e -> runInterp e $ loadProc [String arg]  -- 执行脚本文件
-runOnce ("-e":exprs:_) = defaultEnv >>= \e -> runInterp e once
-  where
-    once :: InterpM LispVal
-    once = loadProc [String "stdlib.scm"] >> evalString exprs
+runOnce ("-v":_) = putStrLn "FSCM version 0.1.1"
+runOnce ("-x":path:_) = defaultEnv >>= \e -> runInterp e $ loadProc [String path]
+runOnce ("-e":exprs:_) = defaultEnv >>= \e -> runInterp e $ loadStd >> evalString exprs
+runOnce [path] = defaultEnv >>= \e -> runInterp e $ loadStd >> loadProc [String path]
 runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
+loadStd :: InterpM LispVal
+loadStd = loadProc [String "stdlib.scm"]
 
 errorHandler :: LispError -> InterpM LispVal
 errorHandler e = liftIO (print e) >> return Undefined

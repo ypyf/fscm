@@ -194,7 +194,7 @@ keywords =
 
 
 quitProc :: [LispVal] -> InterpM LispVal
-quitProc _ = liftIO exitSuccess
+quitProc _ = liftIO $ putStrLn "Bye!" >> liftIO exitSuccess
 
 
 -- 载入lisp源文件
