@@ -7,6 +7,9 @@
  in (unquote y)
  falls mainly on the (unquote z))))
  
+````2 ; => (quasiquote (quasiquote (quasiquote 2)))
+````,2 ; => (quasiquote (quasiquote (quasiquote (unquote 2))))
+````,@2 ; => (quasiquote (quasiquote (quasiquote (unquote-splicing 2))))
  
 (define a 10)
 `,a ; => 10
@@ -23,4 +26,5 @@
 `(+ 1 2 `,@x) ; => (+ 1 2 (quasiquote (unquote-splicing x)))
 `(+ 1 2 `,@x ,@x) ; => (+ 1 2 (quasiquote (unquote-splicing x)) 1 2 3)
 ```,@x ; => (quasiquote (quasiquote (unquote-splicing x)))
+``,@,@x ; => (quasiquote (unquote-splicing 1 2 3))
 ```,x ;= > (quasiquote (quasiquote (unquote x)))

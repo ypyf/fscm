@@ -130,19 +130,23 @@ evalqq level (List lst) = do
 evalqq level expr = evalqq' level expr
 
 evalqq' :: Int -> LispVal -> InterpM LispVal
-evalqq' level v@(List [Symbol "quasiquote", expr]) = evalqq' (level+1) expr
+evalqq' level v@(List [Symbol "quasiquote", expr]) = do
+  v' <- evalqq' (level+1) expr
+  return $ List [Symbol "quasiquote", v']
 
 evalqq' level v@(List [Symbol "unquote", expr])
   | level == 0 = eval expr
   | otherwise = do
     v' <- evalqq' (level-1) expr
-    return $ appendqq level $ List [Symbol "quasiquote", List [Symbol "unquote", v']]
+    return $ List [Symbol "unquote", v']
 
 evalqq' level v@(List [Symbol "unquote-splicing", expr])
   | level == 0 = eval expr >>= splice
   | otherwise = do
     v' <- evalqq' (level-1) expr
-    return $ appendqq level $ List [Symbol "quasiquote", List [Symbol "unquote-splicing", v']]
+    case v' of
+      Slice s -> return $ List $ Symbol "unquote-splicing" : s
+      _       -> return $ List [Symbol "unquote-splicing", v']
   where
     splice :: LispVal -> InterpM LispVal
     splice (List lst) = return $ Slice lst
