@@ -119,13 +119,11 @@ evalqq level v@(List [Symbol "quasiquote", expr]) = evalqq' level v
 evalqq level v@(List [Symbol "unquote", expr]) = evalqq' level v
 evalqq level (List lst) = do
   r <- mapM (evalqq' level) lst
-  return $ List $ concat $ map slicing r
+  return $ List $ concat $ map splicing r
   where
-    slicing :: LispVal -> [LispVal]
-    slicing x =
-      case x of
-        Slice s -> s
-        _       -> [x]
+    splicing :: LispVal -> [LispVal]
+    splicing (Slice s) = s
+    splicing x = [x]
 evalqq level expr = evalqq' level expr
 
 evalqq' :: Int -> LispVal -> InterpM LispVal
@@ -137,7 +135,9 @@ evalqq' level v@(List [Symbol "unquote", expr])
   | level == 0 = eval expr
   | otherwise = do
     v' <- evalqq' (level-1) expr
-    return $ List [Symbol "unquote", v']
+    case v' of
+      Slice s -> return $ List $ Symbol "unquote" : s
+      _       -> return $ List [Symbol "unquote", v']
 
 evalqq' level v@(List [Symbol "unquote-splicing", expr])
   | level == 0 = eval expr >>= splice

@@ -25,6 +25,7 @@
 `(+ (+ ,@x)) ; => (+ (+ 1 2 3))
 `(+ 1 2 `,@x) ; => (+ 1 2 (quasiquote (unquote-splicing x)))
 `(+ 1 2 `,@x ,@x) ; => (+ 1 2 (quasiquote (unquote-splicing x)) 1 2 3)
+``,,@x ; => (quasiquote (unquote 1 2 3))
 ```,@x ; => (quasiquote (quasiquote (unquote-splicing x)))
 ``,@,@x ; => (quasiquote (unquote-splicing 1 2 3))
 ```,x ;= > (quasiquote (quasiquote (unquote x)))
