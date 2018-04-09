@@ -322,8 +322,6 @@ readContents :: [LispVal] -> InterpM LispVal
 readContents [String file] = fmap String $ liftIO $ readFile file
 
 -- FIXME
--- (+) => 0
--- (*) => 1
 -- (+ 1) => 1
 -- (- 1) => -1
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
@@ -575,13 +573,12 @@ idiv a b = return Undefined
 type Opcode = Int
 type DispatchFunc = Opcode -> [LispVal] -> ThrowsError LispVal
 
-opIAdd = 0
-
 -- 运算符映射表
 opcodes :: [(String, DispatchFunc, Int, Int, Opcode)]
 opcodes =
     [
-      ("+", numericOp, 0, 0xfff, opIAdd)
+      ("+", numericOp, 0, 0xfff, 0),
+      ("*", numericOp, 0, 0xfff, 1)
     ]
 
 numericOp :: DispatchFunc
@@ -595,17 +592,17 @@ numericOp opcode args = do
     else numericOp' opcode args
 
 numericOp' :: DispatchFunc
-numericOp' opIAdd [] = return $ Fixnum 0
-numericOp' opIAdd args = (Fixnum . sum) <$> mapM unpackNum args
+numericOp' 0 args = (Fixnum . foldl (+) 0) <$> mapM unpackNum args
+numericOp' 1 args = (Fixnum . foldl (*) 1) <$> mapM unpackNum args
 
--- 内置的纯函数查询表
+-- 纯函数原语
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives =
     [
       -- 数值算符
-      ("+", numericOp opIAdd),
+      ("+", numericOp 0),
       ("-", numericBinop (-)),
-      ("*", numericBinop (*)),
+      ("*", numericOp 1),
       ("/", numericBinop div),
       ("mod", numericBinop mod),
       ("quot", numericBinop quot),
@@ -648,7 +645,7 @@ primitives =
       ("eq?", eqv), ("eqv?", eqv), ("equal?", equal)
     ]
 
--- 内置IO函数查询表
+-- IO函数原语
 primitivesIo :: [(String, [LispVal] -> InterpM LispVal)]
 primitivesIo =
     [
