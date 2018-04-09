@@ -8,7 +8,6 @@ import Scheme.Types
 import Scheme.Parser
 import Scheme.Eval
 
-import Debug.Trace
 import System.Exit
 import System.Mem
 import System.IO

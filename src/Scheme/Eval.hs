@@ -2,7 +2,6 @@ module Scheme.Eval (eval, evalqq, evalTail, apply) where
 
 import Scheme.Types
 
-import Debug.Trace
 import Data.IORef
 import Data.List
 import Control.Monad.Reader
