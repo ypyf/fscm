@@ -154,7 +154,3 @@ evalqq' level v@(List [Symbol "unquote-splicing", expr])
 
 evalqq' level expr@(List _) = evalqq level expr
 evalqq' _ expr = return expr
-
-appendqq :: Int -> LispVal -> LispVal
-appendqq 1 v = v
-appendqq n v = appendqq (n-1) $ List [Symbol "quasiquote", v]
