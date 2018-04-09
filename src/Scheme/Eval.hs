@@ -54,21 +54,23 @@ eval val = return val
 
 
 evalqq :: Int -> LispVal -> InterpM LispVal
-evalqq _ (List [Symbol "unquote", expr]) = eval expr
 evalqq _ (List [Symbol "unquote-splicing", _]) = throwError $ Default "unquote-splicing: invalid context within quasiquote"
-evalqq level (List v) = do
-  r <- mapM (evalqq' level) v
-  return $ List $ concat $ map f r
+evalqq _ v@(List [Symbol "quasiquote", _]) = return v
+evalqq level v@(List [Symbol "unquote", expr])
+  | level == 0 = eval expr
+  | otherwise = return v
+evalqq level (List lst) = do
+  r <- mapM (evalqq' level) lst
+  return $ List $ concat $ map slicing r
   where
-    f :: LispVal -> [LispVal]
-    f x =
+    slicing :: LispVal -> [LispVal]
+    slicing x =
       case x of
         Slice s -> s
         _       -> [x]
-evalqq _ expr = return expr
+evalqq level expr = evalqq' level expr
 
 evalqq' :: Int -> LispVal -> InterpM LispVal
-evalqq' level v@(List [Symbol "quasiquote", expr]) = evalqq (level+1) v
 evalqq' level v@(List [Symbol "unquote-splicing", expr])
   | level == 0 = eval expr >>= splice
   | otherwise = return v

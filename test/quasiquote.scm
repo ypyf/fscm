@@ -7,6 +7,11 @@
  in (unquote y)
  falls mainly on the (unquote z))))
  
+(define a 10)
+`,a ; => 10
+``,a ; => (quasiquote (unquote a))
+`(+ 1 2 `,a ,a) ; => (+ 1 2 (quasiquote (unquote a)) 10)
+
 (define x (list 1 2 3))
 `(+ ,@x) ; => (+ 1 2 3)
 `(+ (+ ,@x)) ; => (+ (+ 1 2 3))

@@ -49,6 +49,9 @@ quasiquote :: [LispVal] -> InterpM LispVal
 quasiquote [datum] = evalqq 0 datum
 quasiquote args = throwError $ NumArgs 1 args
 
+unquote :: [LispVal] -> InterpM LispVal
+unquote args = throwError $ Default "unquote: not in quasiquote"
+
 -- 顶层定义 r5rs 5.2.1
 -- FIXME 只能出现在顶层或<body>的开始
 -- TODO 出现在<body>中的属于内部定义,可以变换为等价的letrec绑定
@@ -169,6 +172,7 @@ keywords =
      ("define-syntax", defineSyntax),
      ("quote", quote),
      ("quasiquote", quasiquote),
+     ("unquote", unquote),
      ("let", letExp),
      ("let*", letStar),
      ("begin", beginExp),
