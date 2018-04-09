@@ -53,34 +53,6 @@ eval (List (x:xs)) = do
 eval val = return val
 
 
-evalqq :: Int -> LispVal -> InterpM LispVal
-evalqq _ (List [Symbol "unquote-splicing", _]) = throwError $ Default "unquote-splicing: invalid context within quasiquote"
-evalqq _ v@(List [Symbol "quasiquote", _]) = return v
-evalqq level v@(List [Symbol "unquote", expr])
-  | level == 0 = eval expr
-  | otherwise = return v
-evalqq level (List lst) = do
-  r <- mapM (evalqq' level) lst
-  return $ List $ concat $ map slicing r
-  where
-    slicing :: LispVal -> [LispVal]
-    slicing x =
-      case x of
-        Slice s -> s
-        _       -> [x]
-evalqq level expr = evalqq' level expr
-
-evalqq' :: Int -> LispVal -> InterpM LispVal
-evalqq' level v@(List [Symbol "unquote-splicing", expr])
-  | level == 0 = eval expr >>= splice
-  | otherwise = return v
-  where
-    splice :: LispVal -> InterpM LispVal
-    splice (List lst) = return $ Slice lst
-    splice notList = throwError $ TypeMismatch "list?" notList
-evalqq' level expr@(List _) = evalqq level expr
-evalqq' _ expr = return expr
-
 -- 用于尾部表达式的求值(尾调用优化)
 evalTail :: LispVal -> InterpM LispVal
 evalTail expr@(List (Symbol "lambda":xs)) = eval expr
@@ -140,3 +112,45 @@ applyTail :: LispVal -> [LispVal] -> InterpM LispVal
 -- 只有自定义函数采用尾调用优化
 applyTail (Closure a b c d) args = return $ List $ TailCall a b c d : args
 applyTail proc args = apply proc args
+
+-- eval quasiquote
+evalqq :: Int -> LispVal -> InterpM LispVal
+evalqq _ (List [Symbol "unquote-splicing", _]) = throwError $ Default "unquote-splicing: invalid context within quasiquote"
+evalqq level v@(List [Symbol "quasiquote", expr]) = evalqq' level v
+evalqq level v@(List [Symbol "unquote", expr]) = evalqq' level v
+evalqq level (List lst) = do
+  r <- mapM (evalqq' level) lst
+  return $ List $ concat $ map slicing r
+  where
+    slicing :: LispVal -> [LispVal]
+    slicing x =
+      case x of
+        Slice s -> s
+        _       -> [x]
+evalqq level expr = evalqq' level expr
+
+evalqq' :: Int -> LispVal -> InterpM LispVal
+evalqq' level v@(List [Symbol "quasiquote", expr]) = evalqq' (level+1) expr
+
+evalqq' level v@(List [Symbol "unquote", expr])
+  | level == 0 = eval expr
+  | otherwise = do
+    v' <- evalqq' (level-1) expr
+    return $ appendqq level $ List [Symbol "quasiquote", List [Symbol "unquote", v']]
+
+evalqq' level v@(List [Symbol "unquote-splicing", expr])
+  | level == 0 = eval expr >>= splice
+  | otherwise = do
+    v' <- evalqq' (level-1) expr
+    return $ appendqq level $ List [Symbol "quasiquote", List [Symbol "unquote-splicing", v']]
+  where
+    splice :: LispVal -> InterpM LispVal
+    splice (List lst) = return $ Slice lst
+    splice notList = throwError $ TypeMismatch "list?" notList
+
+evalqq' level expr@(List _) = evalqq level expr
+evalqq' _ expr = return expr
+
+appendqq :: Int -> LispVal -> LispVal
+appendqq 1 v = v
+appendqq n v = appendqq (n-1) $ List [Symbol "quasiquote", v]
