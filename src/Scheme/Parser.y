@@ -103,8 +103,8 @@ type ParseResult = Either String
 
 -- parseError与parseLisp(top level parser)有着相同的签名
 parseError :: [Token] -> ParseResult a
+parseError []                    = Left $ "syntax error"
 parseError (T pos tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn pos ++ ": " ++ lexeme
-parseError _                     = Left "unknown syntax error"
 
 -- 读取Lisp表达式
 readLisp :: String -> InterpM LispVal
