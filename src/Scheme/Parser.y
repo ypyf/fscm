@@ -6,28 +6,25 @@ import Data.Char
 
 import Scheme.Scan
 import Scheme.Types
-
-
 }
 
-
-
 -- Parser
-%partial parseLisp Lisp
+%partial parseLisp Program
 
 %tokentype { Token }
-%error { parseError }
-%monad { ParseError }
---%lexer { <lexer> } { EOFT }
+%error     { parseError }
+%monad     { ParseResult }
+--%lexer   { <lexer> } { EOFT }
 
 -- terminal
 %token
-eof             { T p EOFT $$ }
+eof         { T p EOFT $$ }
 boolean 	{ T p BoolT $$ }
 character 	{ T p CharT $$ }
 string 		{ T p StringT $$ }
 ident 		{ T p IdentT $$ }
 number		{ T p NumberT $$ }
+fixnum		{ T p FixnumT $$ }
 '#' 		{ T $$ PunctuT "#" }
 '(' 		{ T $$ PunctuT "(" }
 ')' 		{ T $$ PunctuT ")" }
@@ -42,45 +39,43 @@ number		{ T p NumberT $$ }
 
 %%
 
-Lisp : {- empty -} { [] }  --| Datum { [$1] }
-     | Datum Lisp  { $1:$2 }
-
+Program : {- empty -} { [] }
+        | Datum Program { $1 : $2 }
+        
 Datum : eof          { EOF }
       | boolean      { if $1 == "#t" || $1 == "#T" then LispTrue else LispFalse }
-      | number       { Fixnum (read $1 ::Integer) }
+      | fixnum       { Fixnum (read $1 ::Integer) }
       | character    { Char (head $1) }
       | string       { String $1 }
       | ident        { Symbol $1 }
       | List         { $1 }
       | Vector       { $1 }
 
-Lisp1 : Datum { [$1] }
-      | Datum Lisp1 { $1 : $2 }
-
--- 注意虽然根据DotList类型的定义可以表示严格表
+DatumList : {- empty -} { [] }
+          | Datum DatumList { $1 : $2 }
+      
+-- 虽然根据DotList类型的定义可以表示严格表
 -- 但Parser保证返回的DotList不是List（严格表），即它的cdr部分不是List
-List : '(' Lisp1 '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
-     | '[' Lisp1 '.' Datum ']' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
-  -- | '(' Lisp1 '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
-     | '(' '.' Datum ')' { $3 }
-     | '[' '.' Datum ']' { $3 }
-  -- | '(' Lisp1 '.' error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
+List : '(' DatumList '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
+     | '[' DatumList '.' Datum ']' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
+     --| '(' DatumList '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
+     --| '(' '.' Datum ')' { $3 } -- 标准中似乎没有这种写法: (.x) => x
+     --| '[' '.' Datum ']' { $3 }
+  -- | '(' DatumList '.' error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
   -- | '(' '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
-     | '(' Lisp1 ')' { List $2 }
-     | '(' ')'  { List [] }
-     | '[' Lisp1 ']' { List $2 }
-     | '[' ']'  { List [] }
+     | '(' DatumList ')' { List $2 }
+     | '[' DatumList ']' { List $2 }
   -- | '(' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
-  -- | '(' Lisp1 error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
+  -- | '(' DatumList error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
      | '\'' Datum { List [Symbol "quote", $2] }
      | '`' Datum { List [Symbol "quasiquote", $2] }
      | ',' Datum { List [Symbol "unquote", $2] }
      | ",@" Datum { List [Symbol "unquote-splicing", $2] }
 
-Vector : "#(" Lisp ')' { Vector $2 }
-       | "#(" Lisp error {% Left $ showPosn $1 ++ " error: expected a ')' to close '#('" }
+Vector : "#(" DatumList ')' { Vector $2 }
+       | "#(" DatumList error {% Left $ showPosn $1 ++ " error: expected a ')' to close '#('" }
 
--- 注意:没有精确性前缀的数只要有出现至少一个#就是非精确数
+-- 没有精确性前缀的数只要有出现至少一个#就是非精确数
 {-
 Number : Int10	{ $1 }
 	   | Frac10 { $1 }
@@ -104,22 +99,23 @@ Frac10 : SInt10 '/' uint10			{ VRatio (read $1 % read $3) }
 
 {
 
-type ParseError = Either String
+type ParseResult = Either String
 
--- parseError与top level parser有着相同的签名
-parseError :: [Token] -> ParseError a
-parseError (T p tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn p ++ ": " ++ lexeme
-parseError _                   = Left "syntax error"
+-- parseError与parseLisp(top level parser)有着相同的签名
+parseError :: [Token] -> ParseResult a
+parseError (T pos tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn pos ++ ": " ++ lexeme
+parseError _                     = Left "unknown syntax error"
 
-readLisp :: String -> InterpM [LispVal]
-readLisp input =
+-- 读取Lisp表达式
+readLisp :: String -> InterpM LispVal
+readLisp input = 
     case scanner input of
         Left x -> throwError $ ParseError x
         Right toks ->
             case parseLisp toks of
                 Left x -> throwError $ ParseError x
-                Right x -> return x
-
+                Right x -> return $ Values x
+                
 {- main = do
   s <- getContents
   case scanner s of

@@ -12,6 +12,8 @@ import qualified Data.Map.Strict as M
 
 
 eval :: LispVal -> InterpM LispVal
+eval (Values []) = return Undefined
+eval (Values vals) = mapM eval vals >>= return . last
 eval (Symbol name) = do
   r <- ask
   case M.lookup name r of
@@ -29,7 +31,6 @@ eval (List (Symbol "lambda":List params:body)) =
 
 -- 可变参数
 -- (lambda x ...)
--- (lambda (. x) ...) => (lambda x ...) 这种形式在parse阶段已经被转换
 eval (List (Symbol "lambda":Symbol vararg:body)) = ask >>= return . Closure [] (Just vararg) body
 
 

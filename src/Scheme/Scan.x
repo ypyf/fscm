@@ -2,13 +2,13 @@
 -- code
 {             
 module Scheme.Scan
-	(
-	  scanner
-	, showPosn
-	, Token(..)
-	, Tkn(..)
-	, AlexPosn(..)
-	) where
+    (
+      scanner
+    , showPosn
+    , Token(..)
+    , Tkn(..)
+    , AlexPosn(..)
+    ) where
 
 import qualified Data.Char as Char
 }
@@ -17,70 +17,70 @@ import qualified Data.Char as Char
 %wrapper "monad"
 
 -- macro definition
-$digit    	= [0-9]
-$hexdig   	= [0-9 A-F a-f]
-$octal    	= 0-7
-$letter 	= [a-zA-Z] -- alphabetic characters
+$digit      = [0-9]
+$hexdig     = [0-9 A-F a-f]
+$octal      = 0-7
+$letter     = [a-zA-Z] -- alphabetic characters
 
-$special_initial = [\!\$\/\%\&\*\:\<\=\>\?\^\_\~]
+$special_initial    = [\!\$\/\%\&\*\:\<\=\>\?\^\_\~]
 $special_subsequent = [\+\-\.\@]
 
-@initial = $letter | $special_initial
+@initial    = $letter | $special_initial
 @subsequent = @initial | $digit | $special_subsequent
-@ident = @initial@subsequent* | "+" | "-" | "..." | "->"
-@bool = "#t" | "#T" | "#f" | "#F"
+@ident      = @initial@subsequent* | "+" | "-" | "..." | "->"
+@bool       = "#t" | "#T" | "#f" | "#F"
 -- Case is significant in #\<character>, but not in #\<charactername> 
-@char = \#\\. | \#\\[Ss][Pp][Aa][Cc][Ee] | \#\\[Nn][Ee][Ww][Ll][Ii][Nn][Ee]
---@string = \"(\.|[^\"\\])*\"
+@char       = \#\\. | \#\\[Ss][Pp][Aa][Cc][Ee] | \#\\[Nn][Ee][Ww][Ll][Ii][Nn][Ee]
+--@string   = \"(\.|[^\"\\])*\"
 -- TODO 数字和字符串解析放到Parser.y
-@string = \"(\.|[^\"\\]|\\[\'\"\\abfnrtv]|\\[0-7]{1,3}|\\[UuXx][0-9 a-f A-F]+)*\"
-@comment = ";".*
-@ws      = $white+ | @comment
+@string     = \"(\.|[^\"\\]|\\[\'\"\\abfnrtv]|\\[0-7]{1,3}|\\[UuXx][0-9 a-f A-F]+)*\"
+@comment    = ";".*
+@ws         = $white+ | @comment
 
 ----------------------------------------------------
 -- 数值字面量语法示例
 ----------------------------------------------------
 
 -- 指数符号
-$exp_marker = [EeSsFfDdLl]
+$exp_marker    = [EeSsFfDdLl]
 -- 虚数符号
 --$imag_marker = [Ii]
 
 -- 可空非终结符,使用时需要在后面加上问号(?)
-@exact = "#"[Ee]
-@inexact = "#"[Ii]
+@exact     = "#"[Ee]
+@inexact   = "#"[Ii]
 @exactness = @exact | @inexact
-@sign = "+" | "-"
-@suffix = $exp_marker @sign? $digit+
+@sign      = "+" | "-"
+@suffix    = $exp_marker @sign? $digit+
 
 -- 我们暂时之定义了10进制数
 
 -- 进制前缀
-@radix10 = "#"[Dd]
+@radix10    = "#"[Dd]
 -- 前缀
-@prefix10 = @radix10? @exactness? | @exactness? @radix10?
+@prefix10   = @radix10? @exactness? | @exactness? @radix10?
 -- 精确前缀
 @prefix10_e = @radix10? @exact | @exact @radix10?
 -- 非精确前缀
 @prefix10_i = @radix10? @inexact? | @inexact? @radix10?
 
-@uint10 = $digit+ "#"*
+@uint10     = $digit+ "#"*
 
 @decimal10 = @uint10 @suffix?
-		   | "." $digit+ "#"* @suffix?
-		   | $digit+ "." $digit* "#"* @suffix?
-		   | $digit+ "#" "." "#"* @suffix?
+           | "." $digit+ "#"* @suffix?
+           | $digit+ "." $digit* "#"* @suffix?
+           | $digit+ "#" "." "#"* @suffix?
 
 @ureal10 = @uint10 
-	     | @uint10 "/" @uint10
-		 | @decimal10
+         | @uint10 "/" @uint10
+         | @decimal10
 
 @real10 = @sign? @ureal10
 
 @complex10 = @real10 | @real10 "@" @real10
            | @real10 "+" @ureal10 [Ii] | @real10 "-" @ureal10 [Ii]
-		   | @real10 "+"  [Ii] | @real10 "-" [Ii]
-		   | "+" @ureal10 [Ii] | "-" @ureal10 [Ii] | "+" [Ii] | "-" [Ii]
+           | @real10 "+"  [Ii] | @real10 "-" [Ii]
+           | "+" @ureal10 [Ii] | "-" @ureal10 [Ii] | "+" [Ii] | "-" [Ii]
 
 @num10 = @prefix10 @complex10
 
@@ -94,33 +94,33 @@ $exp_marker = [EeSsFfDdLl]
 -- 没有精确性前缀的数只要有至少一个#就是非精确数
 -- @int10 = @radix10? @sign? $digit+ 
 --        | @prefix10_e @sign? $digit+ "#"*
--- 	   
+--     
 -- @frac10 = @radix10? @sign? $digit+ "/" $digit+
--- 		| @prefix10_e @sign? $digit+ "#"* "/" $digit+ "#"*
+--         | @prefix10_e @sign? $digit+ "#"* "/" $digit+ "#"*
 --         
 -- -- 非精确数
 -- @ieint10 = @radix10? @sign? $digit+ "#"+
 --          | @prefix10_i @sign? $digit+ "#"*
--- 		 
+--       
 -- @iefrac10 = @radix10? @sign? $digit+ "#"+ "/" $digit+
--- 		  | @radix10? @sign? $digit+ "/" $digit+ "#"+
--- 		  | @radix10? @sign? $digit+ "#"+ "/" $digit+ "#"+
--- 		  | @prefix10_i @sign? $digit+ "#"* "/" $digit+ "#"*
--- 		  
+--           | @radix10? @sign? $digit+ "/" $digit+ "#"+
+--           | @radix10? @sign? $digit+ "#"+ "/" $digit+ "#"+
+--           | @prefix10_i @sign? $digit+ "#"* "/" $digit+ "#"*
+--        
 -- @real10 = @prefix10 @sign? @decimal10
 --        | @prefix10_inexact @sign? @decimal10
 
 -- rule Note the order!
 scheme :-
-@ws					{ skip }
-<0>   	@bool 				{ mkToken BoolT }
-<0>		@int10				{ number }
-<0>   	@char          		{ char }
-<0>   	@string        		{ string }
-<0>		@ident 				{ ident }
-<0>		[\(\)\[\]\#\@\'\`\,\.] 	{ mkToken PunctuT }
-<0>    	"#("           		{ mkToken VectorT }
-<0>    	",@"           		{ mkToken SplicingT }
+@ws                             { skip }
+<0>     @bool                   { mkToken BoolT }
+<0>     @int10                  { fixnum }
+<0>     @char                   { char }
+<0>     @string                 { string }
+<0>     @ident                  { ident }
+<0>     [\(\)\[\]\#\@\'\`\,\.]  { mkToken PunctuT }
+<0>     "#("                    { mkToken VectorT }
+<0>     ",@"                    { mkToken SplicingT }
         .                       { badToken }
 
 -- code
@@ -132,11 +132,12 @@ data Tkn = EOFT
          | IdentT
          | BoolT
          | NumberT
+         | FixnumT
          | CharT
          | StringT
-         | PunctuT 			-- Punctuation
-         | VectorT 			-- #(
-         | SplicingT       	-- ,@
+         | PunctuT          -- Punctuation
+         | VectorT          -- #(
+         | SplicingT        -- ,@
     deriving (Eq,Show)
 
 mkToken :: Tkn -> AlexInput -> Int -> Alex Token
@@ -147,15 +148,15 @@ mkToken tkn (p, _, _, str) len = return $ T p tkn (take len str)
 dropSign ('+':xs) = xs
 dropSign x        = x
 
-number (p, _, _, str) len = return $ T p NumberT $ map Char.toLower (dropSign (take len str))
+fixnum (p, _, _, str) len = return $ T p FixnumT $ map Char.toLower (dropSign (take len str))
 
 char (p, _, _, str) len = return $ T p CharT (extract len str)
-	where extract len str =
-			let '#':'\\':x = take len str
-	        in case map Char.toLower x of
-				"space" -> ['\x20']
-				"newline" -> ['\x0a']
-				_ -> x
+    where extract len str =
+            let '#':'\\':x = take len str
+            in case map Char.toLower x of
+                "space"   -> ['\x20']
+                "newline" -> ['\x0a']
+                rune      -> rune
 
 string (p, _, _, str) len = return $ T p StringT (extractString len str)
 
@@ -191,9 +192,9 @@ badToken (_, _, _, input) len = alexError $ "illegal character " ++ show (head i
 alexError s = do
   (p, _, _, input) <- alexGetInput
   alexError (showPosn p ++ ": " ++ s ++
-		   (if (not (null input))
-		     then " before " ++ show (head input)
-		     else " at end of file"))
+           (if (not (null input))
+             then " before " ++ show (head input)
+             else " at end of file"))
 -}
 
 showPosn (AlexPn _ line col) = show line ++ ':': show col

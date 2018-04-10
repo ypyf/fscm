@@ -22,7 +22,16 @@ import Control.Monad.Trans.Cont
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map show
 
+-- empty list
+nil :: LispVal
+nil = List []
+
 type ThrowsError = Either LispError
+
+data SchemeNum
+    = Int Integer     -- 高精度整数
+    | Ratio Rational  -- 高精度有理数
+    | Float Double    -- IEEE 浮点数
 
 -- 表达式求值的结果类型
 data LispVal
@@ -30,11 +39,14 @@ data LispVal
     | Undefined  -- 有副作用的函数返回的未定义值
     | EOF
     | Symbol String
+    | SchemeNum
     | Fixnum Integer
+    | Number Double
     | String String
     | Char Char
     | LispTrue
     | LispFalse
+    | Values [LispVal]  -- 多个值
     | DotList [LispVal] LispVal  -- 非严格表
     | List [LispVal]
     | Vector [LispVal] -- TODO []换成Array
@@ -77,15 +89,15 @@ showVal (HPort _) = "#<port>"
 showVal (Syntax _) = "#<special-form>"
 showVal (Transformer _) = "#<transformer>"
 -- showVal (Func {name = name, params = args, vararg = varargs, body = body, closure = env}) =
-    -- "(" ++ name ++ case argslist of
-                     -- []        -> varargslist ++ ")"
-                     -- otherwise -> case varargslist of
-                                    -- []        -> " " ++ argslist ++ ")"
-                                    -- otherwise -> " " ++ argslist ++ " " ++ varargslist ++ ")"
-        -- where argslist = unwords (map (filter (/= '"') . show) args)
-              -- varargslist = case varargs of
-                              -- Just arg -> "[" ++ arg ++ "]"
-                              -- Nothing -> []
+--     "(" ++ name ++ case argslist of
+--                      []        -> varargslist ++ ")"
+--                      otherwise -> case varargslist of
+--                                     []        -> " " ++ argslist ++ ")"
+--                                     otherwise -> " " ++ argslist ++ " " ++ varargslist ++ ")"
+--         where argslist = unwords (map (filter (/= '"') . show) args)
+--               varargslist = case varargs of
+--                               Just arg -> "[" ++ arg ++ "]"
+--                               Nothing -> []
 
 showVal (Char '\x20') = "#\\space"
 showVal (Char '\x0a') = "#\\newline"
@@ -97,12 +109,14 @@ showVal (Char c) = "#\\" ++ [c]
 showVal (String s) = show s
 showVal (Symbol a) = a
 showVal (Fixnum n) = show n
+showVal (Number n) = show n
 showVal LispTrue = "#t"
 showVal LispFalse = "#f"
 showVal (List vals) = "(" ++ unwordsList vals ++ ")"
 showVal (DotList s0 s1) = "(" ++ unwordsList s0 ++ " . " ++ show s1 ++ ")"
 showVal (Module name) = "#<module:" ++ name ++ ">"
-showVal x = "#<runtine error>"  -- debug only
+showVal (Values vals) = "#<Values:" ++ show vals ++ ">"  -- only for debuy
+showVal x = "#<LispVal>"  -- only for debuy
 
 -- instance Eq Lisp where x == y = eqv' x y
 
@@ -116,8 +130,6 @@ showVal x = "#<runtine error>"  -- debug only
 -- eqv' (List arg1) (List arg2) = (length arg1 == length arg2) && (and $ map eqvPair $ zip arg1 arg2)
     -- where eqvPair (x1, x2) = eqv' x1 x2
 -- eqv' _ _ = LispFalse
-
-
 
 -- 环境
 -- type Env = M.Map String (IORef LispVal)

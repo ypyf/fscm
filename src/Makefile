@@ -3,12 +3,13 @@
 # +RTS option: -prof -auto-all
 SRC = Main.hs Scheme/Interp.hs Scheme/Eval.hs Scheme/Types.hs Scheme/Primitives.hs Scheme/Scan.hs Scheme/Parser.hs
 EXE = fscm.exe
+TOOLCHAIN-PATH = "C:/Program Files/Haskell Platform/8.2.2/mingw/bin"
 
 all: fscm
 
 fscm: $(SRC)
 	ghc --make Main.hs -fwarn-missing-signatures -optc-Os -O2 -o $(EXE)
-	strip -p --strip-unneeded --remove-section=.comment $(EXE)
+	$(TOOLCHAIN-PATH)/strip -p --strip-unneeded --remove-section=.comment $(EXE)
 
 Scheme/Scan.hs: Scheme/Scan.x
 	alex Scheme/Scan.x

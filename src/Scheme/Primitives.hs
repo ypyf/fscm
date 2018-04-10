@@ -1,6 +1,6 @@
 -- fscm/core
 module Scheme.Primitives
-    (loadProc, readProc, evalProc, readString,
+    (loadProc, readProc, evalProc, readString, evalString,
      keywords, primitives, primitivesIo)
     where
 
@@ -90,9 +90,7 @@ setVar [Symbol name, expr] = do
   env <- ask
   case M.lookup name env of
     Nothing -> throwError $ UnboundName name
-    Just x -> do
-      liftIO $ writeIORef x val
-      return Undefined
+    Just x -> liftIO $ writeIORef x val >> return Undefined
 
 -- 只有#f是假值
 ifExp :: [LispVal] -> InterpM LispVal
@@ -192,25 +190,13 @@ keywords =
 -- 内置过程 Procedures
 --
 
-
 quitProc :: [LispVal] -> InterpM LispVal
 quitProc _ = liftIO $ putStrLn "Bye!" >> liftIO exitSuccess
 
-
--- 载入lisp源文件
-loadFile :: String -> InterpM [LispVal]
-loadFile file = liftIO (readFile file) >>= readLisp
-
---readLines n f = withFile f ReadMode $ replicateM n . hGetLine
-
--- 载入源文件并转换成Lisp并求值
+-- 载入源文件并求值
 loadProc :: [LispVal] -> InterpM LispVal
-loadProc [String file] = loadFile file >>= mapM_ eval >> return Undefined
+loadProc [String file] = liftIO (readFile file) >>= readLisp >>= eval
 loadProc args = throwError $ NumArgs 1 args
-
--- 调用load并把结果转换成单一的LispVal
-readAll :: [LispVal] -> InterpM LispVal
-readAll [String file] = List <$> loadFile file
 
 -- FIXME
 applyProc :: [LispVal] -> InterpM LispVal
@@ -225,11 +211,7 @@ applyProc (fn:xs) =
 -- 参见 r5rs 6.5
 -- TODO 环境参数
 evalProc :: [LispVal] -> InterpM LispVal
-evalProc [datum] = do
-  ret <- eval datum
-  case ret of  -- 处理顶层尾调用
-    List (func@(TailCall {}):args) -> apply func args
-    _                              -> return ret
+evalProc [datum] = eval datum
 evalProc args = throwError $ NumArgs 1 args
 
 -- call-with-current-continuation
@@ -297,20 +279,20 @@ closePort :: [LispVal] -> InterpM LispVal
 closePort [HPort port] = liftIO $ hClose port >> return LispTrue
 closePort _ = return LispFalse
 
--- from Clojure :-)
-readString :: [LispVal] -> InterpM LispVal
-readString [] = throwError $ NumArgs 1 []
-readString [String str] = do
-  r <- readLisp str
-  case r of
-    [] -> return Undefined
-    x:xs -> return x -- TODO rest部分应该缓存，下一次继续读
-
 -- read函数
 -- read函数将Datum解析为内部对象(Lisp)
 readProc :: [LispVal] -> InterpM LispVal
 readProc [] = readProc [HPort stdin] -- 缺省端口
-readProc [HPort port] = liftIO (hGetLine port) >>= \s -> readString [String s]
+readProc [HPort port] = liftIO (hGetLine port) >>= readLisp
+
+readString :: [LispVal] -> InterpM LispVal
+readString [String str] = readLisp str
+readString [notString] = throwError $ TypeMismatch "string" notString
+readString args = throwError $ NumArgs 1 args
+
+-- (evalString str) => (eval (read-string str))
+evalString :: [LispVal] -> InterpM LispVal
+evalString args = readString args >>= \r -> evalProc [r]
 
 -- 将Lisp转换为字符串形式的外部表示后写入端口
 writeProc :: [LispVal] -> InterpM LispVal
@@ -322,8 +304,6 @@ readContents :: [LispVal] -> InterpM LispVal
 readContents [String file] = fmap String $ liftIO $ readFile file
 
 -- FIXME
--- (+ 1) => 1
--- (- 1) => -1
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop op [] = throwError $ NumArgs 2 []
 numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
@@ -338,6 +318,10 @@ unpackNum (String n) = let parsed = reads n in
                        if null parsed then throwError $ TypeMismatch "number" $ String n
                        else return $ fst $ head parsed
 unpackNum notNum = throwError $ TypeMismatch "number" notNum
+
+checkNum :: LispVal -> ThrowsError LispVal
+checkNum SchemeNum = return SchemeNum
+checkNum other = throwError $ TypeMismatch "number" other
 
 -- doubleBinop :: (Double -> Double -> Double) -> [LispVal] -> ThrowsError LispVal
 -- doubleBinop op [] = throwError $ NumArgs 2 []
@@ -566,44 +550,48 @@ collectGarbage :: [LispVal] -> InterpM LispVal
 collectGarbage [] = liftIO performGC >> return Undefined
 collectGarbage args = throwError $ NumArgs 0 args
 
-idiv :: Integer -> Integer -> InterpM LispVal
-idiv a 0 = throwError ZeroDivision
-idiv a b = return Undefined
+-- idiv :: SchemeNum -> SchemeNum -> InterpM LispVal
+-- idiv a 0 = throwError ZeroDivision
+-- idiv a b = return Undefined
 
-type Opcode = Int
-type DispatchFunc = Opcode -> [LispVal] -> ThrowsError LispVal
+-- exactDivision :: Integer -> Integer -> ThrowsError LispVal
+-- exactDivision _ 0 = throwError ZeroDivision
+-- exactDivision a b = return $ SchemeRatio a b
 
--- 运算符映射表
-opcodes :: [(String, DispatchFunc, Int, Int, Opcode)]
-opcodes =
-    [
-      ("+", numericOp, 0, 0xfff, 0),
-      ("*", numericOp, 0, 0xfff, 1)
-    ]
+-- 算术运算
+-- (+) => 0
+-- (+ 1) => 1
+-- (-) => error
+-- (- 1) = > -1
+-- (*) => 1
+-- (* 1) => 1
+-- (/) => error
+-- (/ 1) => 1
 
-numericOp :: DispatchFunc
-numericOp opcode args = do
-    let (name, dis, min, max, op) = opcodes !! opcode
-        arity = length args
-    -- FIXME 定义新的错误类型，表示超出最大最小arity的情况
-    -- 检查参数数量
-    if arity < min then throwError $ NumArgs min args
-    else if arity >= max then throwError $ NumArgs max args
-    else numericOp' opcode args
+numPlus :: [LispVal] -> ThrowsError LispVal
+numPlus args = (Fixnum . foldl (+) 0) <$> mapM unpackNum args
 
-numericOp' :: DispatchFunc
-numericOp' 0 args = (Fixnum . foldl (+) 0) <$> mapM unpackNum args
-numericOp' 1 args = (Fixnum . foldl (*) 1) <$> mapM unpackNum args
+numMinus :: [LispVal] -> ThrowsError LispVal
+numMinus [] = throwError $ NumArgs 1 []
+numMinus args@[_] = (Fixnum . foldl (-) 0) <$> mapM unpackNum args
+numMinus args = (Fixnum . foldl1 (-)) <$> mapM unpackNum args
+
+numMul :: [LispVal] -> ThrowsError LispVal
+numMul args = (Fixnum . foldl (*) 1) <$> mapM unpackNum args
+
+numDiv :: [LispVal] -> ThrowsError LispVal
+numDiv [] = throwError $ NumArgs 1 []
+numDiv args =(Fixnum . foldl1 div) <$> mapM unpackNum args
 
 -- 纯函数原语
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
 primitives =
     [
       -- 数值算符
-      ("+", numericOp 0),
-      ("-", numericBinop (-)),
-      ("*", numericOp 1),
-      ("/", numericBinop div),
+      ("+", numPlus),
+      ("-", numMinus),
+      ("*", numMul),
+      ("/", numDiv),
       ("mod", numericBinop mod),
       ("quot", numericBinop quot),
       ("rem", numericBinop rem),
@@ -664,10 +652,9 @@ primitivesIo =
      ("current-input-port", currentInputPort),
      ("current-output-port", currentOutputPort),
      ("read", readProc),
-     ("read-string", readString),  -- 非r5rs
      ("write", writeProc),
      ("read-contents", readContents),
-     ("read-all", readAll),
+     ("eval-string", evalString),  -- 非r5rs
 
      -- 控制
      ("sleep", sleepProc),
