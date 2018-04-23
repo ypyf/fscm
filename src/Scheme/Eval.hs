@@ -33,7 +33,6 @@ eval (List (Symbol "lambda":List params:body)) =
 -- (lambda x ...)
 eval (List (Symbol "lambda":Symbol vararg:body)) = ask >>= return . Closure [] (Just vararg) body
 
-
 -- 可变参数
 -- (lambda (x y . z) ...)
 eval (List (Symbol "lambda":dl@(DotList params (Symbol vararg)):body)) =
@@ -87,15 +86,15 @@ apply (Closure params varargs body closure) args = do
   let nargs = length params
   if length args /= nargs && varargs == Nothing then throwError $ NumArgs nargs args
   else do
-    locals <- liftIO $ localBindings nargs varargs
+    locals <- liftIO $ localEnv nargs varargs
     val <- local (\r->M.union locals closure) $ evalBody body
     case val of
       List (TailCall a b c d:args) -> apply (Closure a b c d) args
       _                            -> return val
     where
-      localBindings :: Int -> Maybe String -> IO Env
-      localBindings _ Nothing = mapM (liftIO . newIORef) args >>= return . M.fromList . zip params
-      localBindings nargs (Just argName) = do
+      localEnv :: Int -> Maybe String -> IO Env
+      localEnv _ Nothing = mapM (liftIO . newIORef) args >>= return . M.fromList . zip params
+      localEnv nargs (Just argName) = do
         v0 <- liftIO $ mapM newIORef args
         v1 <- liftIO $ newIORef (List $ drop nargs args)
         return $ M.fromList $ zip params v0 ++ [(argName, v1)]

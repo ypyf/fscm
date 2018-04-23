@@ -58,7 +58,7 @@ runREPL = defaultEnv >>= \e -> runInterp e looper
 
 runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
-  v <- runExceptT $ runReaderT (runStateT (evalContT interp) env) env
+  v <- runExceptT $ runReaderT (evalContT interp) env
   case v of
     Left e  -> print e  -- 打印错误消息
     Right _ -> return ()
@@ -67,7 +67,7 @@ runInterp env interp = do
 -- 显示版本号 fscm -v
 -- 执行文件中的程序 fscm path/to/program
 -- 执行程序前不加载标准库 fscm -x path/to/program
--- 执行但行代码 fscm -e "program"
+-- 执行单行代码 fscm -e "program"
 runOnce :: [String] -> IO ()
 runOnce ("-v":_) = putStrLn "FSCM version 0.1.1"
 runOnce ("-x":path:_) = defaultEnv >>= \e -> runInterp e $ loadProc [String path]
@@ -79,7 +79,11 @@ loadStd :: InterpM LispVal
 loadStd = loadProc [String "stdlib.scm"]
 
 evalPrint :: String -> InterpM LispVal
-evalPrint expr = evalString [String expr] >>= \r -> liftIO (print r) >> return Undefined
+evalPrint expr = do
+  r <- evalString [String expr]
+  case r of
+    Undefined -> return Undefined
+    _         -> liftIO (print r) >> return Undefined
 
 errorHandler :: LispError -> InterpM LispVal
 errorHandler e = liftIO (print e) >> return Undefined

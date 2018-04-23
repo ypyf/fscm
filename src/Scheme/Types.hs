@@ -132,7 +132,6 @@ showVal x = "#<LispVal>"  -- only for debuy
 -- eqv' _ _ = LispFalse
 
 -- 环境
--- type Env = M.Map String (IORef LispVal)
 type Env = M.Map String (IORef LispVal)
 
 -- 环境 | 参数 闭包 环境
@@ -146,9 +145,10 @@ instance MonadError e m => MonadError e (ContT r m) where
     m `catchError` h = ContT $ \c -> runContT m c `catchError` \e -> runContT (h e) c
 
 -- 解释器单子
-type InterpM = ContT LispVal (StateT Env (ReaderT Env (ExceptT LispError IO)))
+type InterpM = ContT LispVal (ReaderT Env (ExceptT LispError IO))
+--type InterpM = ContT LispVal (StateT Env (ReaderT Env (ExceptT LispError IO)))
 -- type InterpM = ContT LispVal (StateT Store (ExceptT LispError IO))
--- type InterpM = ContT LispVal (ReaderT Env (ExceptT LispError IO))
+
 
 -- 解释器错误
 data LispError
