@@ -86,7 +86,7 @@ defineVar _ = throwError $ Default "define: bad syntax"
 setVar :: [LispVal] -> InterpM LispVal
 setVar [Symbol name, expr] = do
   -- TODO 不可赋予Void(undefined)值
-  val <- eval expr  -- 注意首先对expr求值
+  val <- eval expr  -- 首先对expr求值
   env <- ask
   case M.lookup name env of
     Nothing -> throwError $ UnboundName name
@@ -129,6 +129,28 @@ letStar (List []:bodys) = eval $ List $ Symbol "let":List []:bodys
 letStar (List (binding:rest):bodys) = eval $ List [Symbol "let", List [binding], List (Symbol "let*":List rest:bodys)]
 letStar [] = throwError $ BadSpecialForm "let*" $ String "(let*)"
 letStar [args] = throwError $ BadSpecialForm "let*" args
+
+letRec :: [LispVal] -> InterpM LispVal
+letRec (List bindings:bodys) = do
+    x <- unpack bindings
+    let pairs = unzip x
+        keys = fst pairs
+        values = snd pairs
+        initValues = keys >> [Undefined]
+    -- 所有绑定先初始化为Undefined
+    e <- fmap (M.fromList . zip (symbol keys)) (mapM (liftIO . newIORef) initValues)
+    local (M.union e) $ eval $ List (List (Symbol "lambda":List keys:bodys):values)
+    where
+      unpack :: [LispVal] -> InterpM [(LispVal, LispVal)]
+      unpack [] = return []
+      unpack (List [x, v]:xs) = do
+        xs' <- unpack xs
+        return $ (x, v) : xs'
+      unpack (x:_) = throwError $ BadSpecialForm "letrec" x
+      symbol :: [LispVal] -> [String]
+      symbol [] = []
+      symbol (Symbol s:xs) = s:symbol xs
+
 
 -- (begin e1 e2 ...) => ((lambda () e1 e2 ...))
 -- FIXME 顶层begin中的define应该绑定在顶层环境
@@ -176,6 +198,7 @@ keywords =
      ("unquote-splicing", unquoteSplicing),
      ("let", letExp),
      ("let*", letStar),
+     ("letrec", letRec),
      ("begin", beginExp),
      ("if", ifExp),
      ("define", defineVar),

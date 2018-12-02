@@ -1,5 +1,8 @@
 #lang r5rs
 
+;;
+(letrec ((a 1) (fn (lambda () (fn)))) (fn))
+
 ; 错误 lambda中的egg未定义
 (let ((egg 100)(fn (lambda (x) (+ x egg)))) (fn 2))
 ; 正确  ==> 102
@@ -14,7 +17,7 @@
 				(* n (factorial (- n 1)))
 				1))))
 	(factorial 3))
-	
+
 ; 正确 ==> 6
 (letrec ((factorial
 	(lambda (n)
@@ -30,7 +33,7 @@
 				(* n (factorial (- n 1)))
 				1))))
 	(factorial 3))
-	
+
 ; 正确 ==> 4
 (letrec ((a 1) (b (+ 1 2))) (+ a b))
 
@@ -47,7 +50,7 @@
 	(b (* a 2))	; a未定义
 	(c (- b 3)))
 	c)
-	
+
 ; r5rs错误 racket正确	==> 7
 (letrec ((a 5)
 	(b (* a 2))
@@ -57,8 +60,8 @@
 (let* ((a (let* ((t 100)) (+ t 1)))
 	(b (* a 2))
 	(c (- b 3)))
-	c)	
-	
+	c)
+
 ; 正确 ==> 7
 (let ((a 5))
 	(let ((b (* a 2)))
@@ -66,13 +69,13 @@
 			c)))
 
 ; 正确 ==> -80 通过平行赋值来进行变量交换
-(let ((a 100) (b 20)) 
-	(let ((a b)(b a)) 
+(let ((a 100) (b 20))
+	(let ((a b)(b a))
 		(- a b)))
-			
+
 ; 正确	==> 7
 
-; ==> 70	
+; ==> 70
 (let ((x 2) (y 3))
   (let* ((x 7)
          (z (+ x y)))

@@ -1,7 +1,7 @@
 ;;Not really an error to fail this (Matthias Radestock)
 ;;If this returns (0 1 0), your map isn't call/cc safe, but is probably
 ;;tail-recursive.  If its (0 0 0), the opposite is true.
-(let ((result 
+(let ((result
        (let ()
          (define executed-k #f)
          (define cont #f)
@@ -12,8 +12,8 @@
                                (call/cc (lambda (k) (set! cont k) 0))
                                0))
                          '(1 0 2)))
-         (if (not executed-k)           
-             (begin (set! executed-k #t) 
+         (if (not executed-k)
+             (begin (set! executed-k #t)
                     (set! res2 res1)
                     (cont 1)))
          res2)))
@@ -21,14 +21,14 @@
       (display "Map is call/cc safe, but probably not tail recursive or inefficient.")
       (display "Map is not call/cc safe, but probably tail recursive and efficient."))
   (newline))
-  
+
 ; Infinit Tail Recursion
 (define f (lambda () (f)))
-(define g (lambda (a b) ((lambda () (+ 1 3)(g a b)))))
+(define g (lambda (a b) ((lambda () (+ 1 3) (g a b)))))
 (define h (lambda (a b) (if 1 (begin (+ 1 2) (h a b)) a)))
 
 ; ÓÐÇîµÝ¹é
-(define j (lambda (a b) 
+(define j (lambda (a b)
 	(if (< a b)
 		(j (+ a 1) b)
 		a)))
@@ -36,17 +36,17 @@
 ;; (+ 1 2 3 (j 1 2))
 
 (define count 0)
-(define jj (lambda () 
+(define jj (lambda ()
 	(if (< count 1000000)
 		(begin (set! count (+ count 1))(jj))
 		count)))
 
 (define b0 (lambda() (set! count (+ count 1))(f0)))
-(define kk (lambda () 
+(define kk (lambda ()
 	(if (< count 1000000)
 		(begin (set! count (+ count 1))(kk))
 		1)))
-		
+
 ;; »¥µÝ¹é
 (define f0 (lambda()(f1)))
 (define f1 (lambda()(f2)))
@@ -59,13 +59,13 @@
 	(product (+ 1 min)
 		 (* min max))))
   (product 1 n))
-  
+
 (define (fib n) (if (= n 1)
-                    0 
+                    0
                     (if (= n 2) 1 (fibTail n 0 1))))
-                    
-(define (fibTail n a b) (if (= n 3) 
+
+(define (fibTail n a b) (if (= n 3)
                             (+ a b)
                             (fibTail (- n 1) b (+ a b))))
 
-;;   
+;;

@@ -34,19 +34,18 @@ primitiveIoBindings = [(k, v) | (k, f) <- primitivesIo, let v = IOFunc f]
 syntaxBindings :: [(String, LispVal)]
 syntaxBindings = [(k, v) | (k, f) <- keywords, let v = Syntax f]
 
-
 prompt :: String -> IO ()
 prompt str = putStr str >> hFlush stdout
 
 -- 运行REPL解释器
 -- TODO 使用Scheme本身去写REPL
-runREPL :: IO ()
-runREPL = defaultEnv >>= \e -> runInterp e looper
+runREPL :: String -> IO ()
+runREPL str = defaultEnv >>= \e -> runInterp e repl
  where
-   looper :: InterpM LispVal
-   looper = do
-     loadProc [String "stdlib.scm"] `catchError` loaderErrorHandler
-     forever $ liftIO (prompt "> ") >> interp
+   repl :: InterpM LispVal
+   repl = do
+     loadStdlib `catchError` loaderErrorHandler
+     forever $ liftIO (prompt str) >> interp
    interp :: InterpM LispVal
    interp = do
      -- TODO 检查语法后再调用readLisp
@@ -58,9 +57,9 @@ runREPL = defaultEnv >>= \e -> runInterp e looper
 
 runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
-  v <- runExceptT $ runReaderT (evalContT interp) env
+  v <- runExceptT $ runReaderT (runStateT (evalContT interp) env) env
   case v of
-    Left e  -> print e  -- 打印错误消息
+    Left err  -> print err
     Right _ -> return ()
 
 -- 以命令行参数方式运行
@@ -71,12 +70,12 @@ runInterp env interp = do
 runOnce :: [String] -> IO ()
 runOnce ("-v":_) = putStrLn "FSCM version 0.1.1"
 runOnce ("-x":path:_) = defaultEnv >>= \e -> runInterp e $ loadProc [String path]
-runOnce ("-e":expr:_) = defaultEnv >>= \e -> runInterp e $ loadStd >> evalPrint expr
-runOnce [path] = defaultEnv >>= \e -> runInterp e $ loadStd >> loadProc [String path]
+runOnce ("-e":expr:_) = defaultEnv >>= \e -> runInterp e $ loadStdlib >> evalPrint expr
+runOnce [path] = defaultEnv >>= \e -> runInterp e $ loadStdlib >> loadProc [String path]
 runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
-loadStd :: InterpM LispVal
-loadStd = loadProc [String "stdlib.scm"]
+loadStdlib :: InterpM LispVal
+loadStdlib = loadProc [String "stdlib.scm"]
 
 evalPrint :: String -> InterpM LispVal
 evalPrint expr = do

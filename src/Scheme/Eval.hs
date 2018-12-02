@@ -19,7 +19,11 @@ eval (Symbol name) = do
   r <- ask
   case M.lookup name r of
     Nothing -> throwError $ UnboundName name
-    Just x  -> liftIO $ readIORef x
+    Just x  -> do
+      v <- liftIO $ readIORef x
+      case v of
+        Undefined -> throwError $ UnboundName name
+        _ -> return v
 
 -- 定义闭包(lambda abstract) call by value
 -- 定义时检查重复的形式参数名

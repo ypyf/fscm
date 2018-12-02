@@ -83,8 +83,8 @@ showVal (Continuation _) = "#<continuation>"
 showVal (Func _) = "#<procedure>"
 showVal (IOFunc _) = "#<procedure>"
 showVal (HFunc _) = "#<hs-procedure>"
-showVal (Closure {}) = "#<procedure>"
-showVal (TailCall {}) = "#<tailcall>"
+showVal Closure {} = "#<procedure>"
+showVal TailCall {} = "#<tailcall>"
 showVal (HPort _) = "#<port>"
 showVal (Syntax _) = "#<special-form>"
 showVal (Transformer _) = "#<transformer>"
@@ -134,20 +134,13 @@ showVal x = "#<LispVal>"  -- only for debuy
 -- 环境
 type Env = M.Map String (IORef LispVal)
 
--- 环境 | 参数 闭包 环境
--- data Context = SC !Env | TC Context Context Context
-
--- 存储
--- type Store = M.Map String LispVal
-
 instance MonadError e m => MonadError e (ContT r m) where
     throwError = lift . throwError
     m `catchError` h = ContT $ \c -> runContT m c `catchError` \e -> runContT (h e) c
 
 -- 解释器单子
-type InterpM = ContT LispVal (ReaderT Env (ExceptT LispError IO))
---type InterpM = ContT LispVal (StateT Env (ReaderT Env (ExceptT LispError IO)))
--- type InterpM = ContT LispVal (StateT Store (ExceptT LispError IO))
+-- type InterpM = ContT LispVal (ReaderT Env (ExceptT LispError IO))
+type InterpM = ContT LispVal (StateT Env (ReaderT Env (ExceptT LispError IO)))
 
 
 -- 解释器错误

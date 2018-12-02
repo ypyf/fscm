@@ -10,5 +10,5 @@ info = "Type (quit) to quit FSCM."
 main :: IO ()
 main = do
   args <- getArgs
-  if null args then putStrLn info >> runREPL
+  if null args then putStrLn info >> runREPL "> "
   else runOnce args

@@ -13,7 +13,7 @@
 
 (is '(1 2 3)
  ((lambda (begin) (begin 1 2 3)) (lambda lambda lambda)))
- 
+
 (is '(1)
     ((lambda (quote if) (quote if)) list 1))
 
@@ -46,10 +46,7 @@
 
 ;; test defineVar bug
 (define count 0)
-(define jj (lambda () 
-	(if (< count 1000)
-		(begin (set! count (+ count 1)) (jj))
-		count)))
+(define jj (lambda () (if (< count 1000) (begin (set! count (+ count 1)) (jj)) count)))
 (jj)
 (define count 0)
 (jj)

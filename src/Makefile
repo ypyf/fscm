@@ -21,6 +21,8 @@ prof: fscm-prof
 fscm-prof: $(SRC)
 	ghc --make Main.hs -prof -auto-all -fwarn-missing-signatures -optc-Os -O2 -o $(EXE)
 
+run: fscm
+	rlwrap ./fscm.exe
 clean:
 	rm -f $(EXE)
 	rm -f *.o *.hi
