@@ -39,7 +39,6 @@ eval (List (Symbol "lambda":Symbol vararg:body)) = fmap (Closure [] (Just vararg
 eval (List (Symbol "lambda":dl@(DotList params (Symbol vararg)):body)) =
   fmap (Closure (map showVal params) (Just vararg) body) ask
 
-
 eval form@(DotList s0 s1) = throwError $ Default $ "illegal use of `.' in: " ++ show form
 
 -- function apply
@@ -120,7 +119,7 @@ evalqq level v@(List [Symbol "quasiquote", expr]) = evalqq' level v
 evalqq level v@(List [Symbol "unquote", expr]) = evalqq' level v
 evalqq level (List lst) = do
   r <- mapM (evalqq' level) lst
-  return $ List $ concat $ map splicing r
+  return $ List $ concatMap splicing r
   where
     splicing :: LispVal -> [LispVal]
     splicing (Slice s) = s

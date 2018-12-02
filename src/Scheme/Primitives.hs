@@ -134,7 +134,7 @@ letStar [args] = throwError $ BadSpecialForm "let*" args
 -- FIXME 顶层begin中的define应该绑定在顶层环境
 beginExp :: [LispVal] -> InterpM LispVal
 beginExp [] = return Undefined
-beginExp lst = evalTail $ List [List $ Symbol "lambda":List []:lst]  -- 这里是尾调用而不是Lambda定义
+beginExp lst = eval $ List [List $ Symbol "lambda":List []:lst]
 
 
 -- (define-syntax ...)
@@ -333,7 +333,6 @@ checkNum other = throwError $ TypeMismatch "number" other
 -- unpackDouble (List [n]) = unpackDouble n
 -- unpackDouble notDouble = throwError $ TypeMismatch "double" notDouble
 
--- 二元真值函数助手
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop _ _ [] = throwError $ NumArgs 2 []
 boolBinop _ _ args@[x] = throwError $ NumArgs 2 args
