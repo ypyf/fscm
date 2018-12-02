@@ -2,6 +2,7 @@ module Scheme.Eval (eval, evalqq, evalTail, apply) where
 
 import Scheme.Types
 
+import Data.Maybe (isNothing)
 import Data.IORef
 import Data.List
 import Control.Monad.Reader
@@ -13,7 +14,7 @@ import qualified Data.Map.Strict as M
 
 eval :: LispVal -> InterpM LispVal
 eval (Values []) = return Undefined
-eval (Values vals) = mapM eval vals >>= return . last
+eval (Values vals) = fmap last (mapM eval vals)
 eval (Symbol name) = do
   r <- ask
   case M.lookup name r of
@@ -27,16 +28,16 @@ eval form@(List [Symbol "lambda", _]) = throwError $ BadSpecialForm "no expressi
 -- 固定参数
 -- (lambda (x ...) ...)
 eval (List (Symbol "lambda":List params:body)) =
-  ask >>= return . Closure (map showVal params) Nothing body
+  fmap (Closure (map showVal params) Nothing body) ask
 
 -- 可变参数
 -- (lambda x ...)
-eval (List (Symbol "lambda":Symbol vararg:body)) = ask >>= return . Closure [] (Just vararg) body
+eval (List (Symbol "lambda":Symbol vararg:body)) = fmap (Closure [] (Just vararg) body) ask
 
 -- 可变参数
 -- (lambda (x y . z) ...)
 eval (List (Symbol "lambda":dl@(DotList params (Symbol vararg)):body)) =
-  ask >>= return . Closure (map showVal params) (Just vararg) body
+  fmap (Closure (map showVal params) (Just vararg) body) ask
 
 
 eval form@(DotList s0 s1) = throwError $ Default $ "illegal use of `.' in: " ++ show form
@@ -70,12 +71,12 @@ apply (Syntax s) args = s args
 apply (HFunc func) args =  func args
 apply (IOFunc func) args = func args
 
-apply (Func fn) args = do
+apply (Func fn) args =
   case fn args of
     Left e -> throwError e  -- 再次抛出,提升ThrowsError
     Right a -> return a
 
-apply (Continuation cont) args = do
+apply (Continuation cont) args =
   case args of
     []  -> cont Undefined
     [x] -> cont x
@@ -84,7 +85,7 @@ apply (Continuation cont) args = do
 
 apply (Closure params varargs body closure) args = do
   let nargs = length params
-  if length args /= nargs && varargs == Nothing then throwError $ NumArgs nargs args
+  if length args /= nargs && isNothing varargs then throwError $ NumArgs nargs args
   else do
     locals <- liftIO $ localEnv nargs varargs
     val <- local (\r->M.union locals closure) $ evalBody body
@@ -93,7 +94,7 @@ apply (Closure params varargs body closure) args = do
       _                            -> return val
     where
       localEnv :: Int -> Maybe String -> IO Env
-      localEnv _ Nothing = mapM (liftIO . newIORef) args >>= return . M.fromList . zip params
+      localEnv _ Nothing = fmap (M.fromList . zip params) (mapM (liftIO . newIORef) args)
       localEnv nargs (Just argName) = do
         v0 <- liftIO $ mapM newIORef args
         v1 <- liftIO $ newIORef (List $ drop nargs args)

@@ -126,9 +126,9 @@ letExp (List bindings:bodys) = do
 -- let* 可以变换为等价的let形式
 letStar :: [LispVal] -> InterpM LispVal
 letStar (List []:bodys) = eval $ List $ Symbol "let":List []:bodys
-letStar (List (binding:rest):bodys) = eval $ List $ Symbol "let":List [binding]:List (Symbol "let*":List rest:bodys):[]
+letStar (List (binding:rest):bodys) = eval $ List [Symbol "let", List [binding], List (Symbol "let*":List rest:bodys)]
 letStar [] = throwError $ BadSpecialForm "let*" $ String "(let*)"
-letStar [args] = throwError $ BadSpecialForm "let*" $ args
+letStar [args] = throwError $ BadSpecialForm "let*" args
 
 -- (begin e1 e2 ...) => ((lambda () e1 e2 ...))
 -- FIXME 顶层begin中的define应该绑定在顶层环境
@@ -307,7 +307,7 @@ readContents [String file] = fmap String $ liftIO $ readFile file
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop op [] = throwError $ NumArgs 2 []
 numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
-numericBinop op params = mapM unpackNum params >>= return . Fixnum . foldl1 op
+numericBinop op params = fmap (Fixnum . foldl1 op) (mapM unpackNum params)
   --control $ \run -> catch (run . (\e -> mapM unpackNum params >>= return . Fixnum . foldl1 op)) (run . (\e -> throwError $ Default "/: division by zero"))
   --mapM unpackNum params >>= return . Fixnum . foldl1 op
 

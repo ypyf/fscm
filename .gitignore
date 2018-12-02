@@ -10,3 +10,5 @@ cabal-dev
 # auto-generated file
 src/Scheme/Scan.hs
 src/Scheme/Parser.hs
+
+.DS_Store

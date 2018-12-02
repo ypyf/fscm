@@ -41,7 +41,7 @@ fixnum		{ T p FixnumT $$ }
 
 Program : {- empty -} { [] }
         | Datum Program { $1 : $2 }
-        
+
 Datum : eof          { EOF }
       | boolean      { if $1 == "#t" || $1 == "#T" then LispTrue else LispFalse }
       | fixnum       { Fixnum (read $1 ::Integer) }
@@ -53,13 +53,13 @@ Datum : eof          { EOF }
 
 DatumList : {- empty -} { [] }
           | Datum DatumList { $1 : $2 }
-      
--- 虽然根据DotList类型的定义可以表示严格表
--- 但Parser保证返回的DotList不是List（严格表），即它的cdr部分不是List
-List : '(' DatumList '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
-     | '[' DatumList '.' Datum ']' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 有必要优先解析点对吗??
+
+-- 脣盲脠禄赂霉戮脻DotList脌脿脨脥碌脛露篓脪氓驴脡脪脭卤铆脢戮脩脧赂帽卤铆
+-- 碌芦Parser卤拢脰陇路碌禄脴碌脛DotList虏禄脢脟List拢篓脩脧赂帽卤铆拢漏拢卢录麓脣眉碌脛cdr虏驴路脰虏禄脢脟List
+List : '(' DatumList '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 脫脨卤脴脪陋脫脜脧脠陆芒脦枚碌茫露脭脗冒??
+     | '[' DatumList '.' Datum ']' { case $4 of { DotList s0 s1 -> DotList ($2++s0) s1; List vals -> List ($2++vals); _ -> DotList $2 $4} }  -- 脫脨卤脴脪陋脫脜脧脠陆芒脦枚碌茫露脭脗冒??
      --| '(' DatumList '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
-     --| '(' '.' Datum ')' { $3 } -- 标准中似乎没有这种写法: (.x) => x
+     --| '(' '.' Datum ')' { $3 } -- 卤锚脳录脰脨脣脝潞玫脙禄脫脨脮芒脰脰脨麓路篓: (.x) => x
      --| '[' '.' Datum ']' { $3 }
   -- | '(' DatumList '.' error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
   -- | '(' '.' Datum error {% Left $ showPosn $1 ++ " expected a ')' to close '('" }
@@ -75,16 +75,16 @@ List : '(' DatumList '.' Datum ')' { case $4 of { DotList s0 s1 -> DotList ($2++
 Vector : "#(" DatumList ')' { Vector $2 }
        | "#(" DatumList error {% Left $ showPosn $1 ++ " error: expected a ')' to close '#('" }
 
--- 没有精确性前缀的数只要有出现至少一个#就是非精确数
+-- 脙禄脫脨戮芦脠路脨脭脟掳脳潞碌脛脢媒脰禄脪陋脫脨鲁枚脧脰脰脕脡脵脪禄赂枚#戮脥脢脟路脟戮芦脠路脢媒
 {-
 Number : Int10	{ $1 }
 	   | Frac10 { $1 }
 
--- 有符号10进制整数
+-- 脫脨路没潞脜10陆酶脰脝脮没脢媒
 SInt10 : uint10					{ $1 }
        | '+' uint10				{ $2 }
        | '-' uint10				{ '-':$2 }
--- 精确数
+-- 戮芦脠路脢媒
 Int10 : SInt10					{ VInt (read $1 ::Integer) }
 	  | radix10 SInt10			{ VInt (read $2 ::Integer) }
 	  | prefix10_e SInt10 ManyS	{ VInt (read $2 * 10^$3) }
@@ -101,21 +101,21 @@ Frac10 : SInt10 '/' uint10			{ VRatio (read $1 % read $3) }
 
 type ParseResult = Either String
 
--- parseError与parseLisp(top level parser)有着相同的签名
+-- parseError脫毛parseLisp(top level parser)脫脨脳脜脧脿脥卢碌脛脟漏脙没
 parseError :: [Token] -> ParseResult a
 parseError []                    = Left $ "syntax error"
 parseError (T pos tkn lexeme:xs) = Left $ "syntax error: " ++ showPosn pos ++ ": " ++ lexeme
 
--- 读取Lisp表达式
+-- 露脕脠隆Lisp卤铆麓茂脢陆
 readLisp :: String -> InterpM LispVal
-readLisp input = 
+readLisp input =
     case scanner input of
         Left x -> throwError $ ParseError x
         Right toks ->
             case parseLisp toks of
                 Left x -> throwError $ ParseError x
                 Right x -> return $ Values x
-                
+
 {- main = do
   s <- getContents
   case scanner s of

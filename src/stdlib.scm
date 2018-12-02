@@ -67,8 +67,8 @@
 
 (define (map func lst) (foldr (lambda (x y) (cons (func x) y)) '() lst))
 ;;(define map
-;;    (lambda (f lst) 
-;;        (if (null? lst) 
+;;    (lambda (f lst)
+;;        (if (null? lst)
 ;;            '()
 ;;            (cons (f (car lst)) (map f (cdr lst))))))
 (define (filter pred lst) (foldr (lambda (x y) (if (pred x) (cons x y) y)) '() lst))
@@ -89,7 +89,7 @@
 
 ; (define (append . lst)
   ; (define append-2
-          ; (lambda (inlist alist) 
+          ; (lambda (inlist alist)
                   ; (foldr (lambda (ap in) (cons ap in)) alist inlist)))
   ; (if (null? lst)
       ; lst
@@ -117,7 +117,7 @@
 (define println
 	(lambda (a) (display a)(newline)))
 
-;; �﷨�ؼ���
+;; Óï·¨¹Ø¼ü×Ö
 (define-syntax and
     (syntax-rules ()
         ((and) #t)
