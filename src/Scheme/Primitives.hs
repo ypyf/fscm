@@ -106,6 +106,8 @@ ifExp [pred, conseq, alt] = do
     LispFalse -> evalTail alt
     _         -> evalTail conseq
 
+ifExp _ = throwError $ Default "if: bad syntax"    
+
 -- 局部绑定
 -- 变换为等价的函数应用
 letExp :: [LispVal] -> InterpM LispVal
@@ -396,6 +398,7 @@ unpackBool notBool = throwError $ TypeMismatch "boolean" notBool
 
 isPair :: [LispVal] -> ThrowsError LispVal
 isPair [DotList _ _] = return LispTrue
+isPair [List (x:xs)] = return LispTrue
 isPair [_] = return LispFalse
 isPair args = throwError $ NumArgs 1 args
 

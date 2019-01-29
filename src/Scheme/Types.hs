@@ -113,6 +113,7 @@ showVal (Number n) = show n
 showVal LispTrue = "#t"
 showVal LispFalse = "#f"
 showVal (List vals) = "(" ++ unwordsList vals ++ ")"
+showVal (DotList [] s1) = show s1
 showVal (DotList s0 s1) = "(" ++ unwordsList s0 ++ " . " ++ show s1 ++ ")"
 showVal (Module name) = "#<module:" ++ name ++ ">"
 showVal (Values vals) = "#<Values:" ++ show vals ++ ">"  -- only for debuy
