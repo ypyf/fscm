@@ -229,7 +229,7 @@ applyProc [] = throwError $ NumArgs 2 []
 applyProc val@[_] = throwError $ NumArgs 2 val
 applyProc (fn:xs) =
     case last xs of
-        List args -> eval $ List $ fn : (init xs ++ args)
+        List args -> apply fn (init xs ++ args)
         notList   -> throwError $ TypeMismatch "List" notList
 
 
