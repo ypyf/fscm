@@ -141,7 +141,7 @@ instance MonadError e m => MonadError e (ContT r m) where
 
 -- 解释器单子
 -- type InterpM = ContT LispVal (ReaderT Env (ExceptT LispError IO))
-type InterpM = ContT LispVal (StateT Env (ReaderT Env (ExceptT LispError IO)))
+type InterpM = ContT LispVal (ReaderT Env (ExceptT LispError IO))
 
 
 -- 解释器错误

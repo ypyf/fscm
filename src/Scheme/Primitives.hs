@@ -61,13 +61,9 @@ unquoteSplicing args = throwError $ Default "unquote-splicing: not in quasiquote
 -- 在修改后的环境中执行后续计算
 defineVar :: [LispVal] -> InterpM LispVal
 defineVar [Symbol name, expr] = do
-  env <- ask   -- FIXME get TopEnv
-  case M.lookup name env of
-      Nothing -> do
-        tmp <- liftIO $ newIORef Undefined
-        callCC $ \k -> local (M.insert name tmp) (def tmp >>= k)
-      -- 重定义变量
-      Just var -> def var
+  env <- ask
+  tmp <- liftIO $ newIORef Undefined
+  callCC $ \k -> local (M.insert name tmp) (def tmp >>= k)
   where
       def :: IORef LispVal -> InterpM LispVal
       def var = eval expr >>= liftIO . writeIORef var >> return Undefined
@@ -308,7 +304,9 @@ closePort _ = return LispFalse
 -- read函数将Datum解析为内部对象(Lisp)
 readProc :: [LispVal] -> InterpM LispVal
 readProc [] = readProc [HPort stdin] -- 缺省端口
-readProc [HPort port] = liftIO (hGetLine port) >>= readLisp
+readProc [HPort port] = do
+  isEOF <- liftIO $ hIsEOF port
+  if isEOF then liftIO exitSuccess else liftIO (hGetLine port) >>= readLisp
 
 readString :: [LispVal] -> InterpM LispVal
 readString [String str] = readLisp str
@@ -684,7 +682,7 @@ primitivesIo =
      -- 控制
      ("sleep", sleepProc),
      ("collect-garbage", collectGarbage),
-     ("quit", quitProc)
+     ("exit", quitProc)
 
      -- 互操作
      --("load-ffi", loadHaskellFunction)

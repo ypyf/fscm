@@ -11,20 +11,31 @@
 ; => if error
 ((lambda (quote if) (quote if)) list 1)
 
+(define (foo func) (lambda (a b) (set! a 100) (func a b)))
+((foo *) 1 2) ; => 200
+
+; => (a b c)
+(append '(a b c) '())
+
 ; 闭包作用域测试
-; => 2 ok
-; => 3 error
+
 (define func +)
 (define (foo func) (lambda (a b) (func a b)))
-((foo *) 1 2)
+((foo *) 1 2) ;=> 2
 
 (define (foo) (lambda (a b) (func a b)))
 ; => 3 ok
 ; => func未定义 error
 ((foo) 1 2)
 
-(define (foo func) (lambda (a b) (set! a 100) (func a b)))
-((foo *) 1 2) ; => 200
+;=> 30
+(define (addn n) (lambda (x) (+ x n)))
+((addn 10) 20)
 
-; => (a b c)
-(append '(a b c) '())
+(define a 1)
+((lambda (x y) (define a 2) (+ x y a)) 2 3)
+a ;=> 1
+
+(define f (lambda (a) (+ a b)))
+(define b 10)
+(f 20) ;=> 30

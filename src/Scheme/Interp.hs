@@ -57,7 +57,7 @@ runREPL str = defaultEnv >>= \e -> runInterp e repl
 
 runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
-  v <- runExceptT $ runReaderT (runStateT (evalContT interp) env) env
+  v <- runExceptT $ runReaderT (evalContT interp) env
   case v of
     Left err  -> print err
     Right _ -> return ()

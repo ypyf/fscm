@@ -91,7 +91,8 @@ apply (Closure params varargs body closure) args = do
   if length args /= nargs && isNothing varargs then throwError $ NumArgs nargs args
   else do
     locals <- liftIO $ localEnv nargs varargs
-    val <- local (\r->M.union locals closure) $ evalBody body
+    let ctx = M.union locals closure
+    val <- local (\r->M.union ctx r) $ evalBody body
     case val of
       List (TailCall a b c d:args) -> apply (Closure a b c d) args
       _                            -> return val
