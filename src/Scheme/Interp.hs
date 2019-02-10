@@ -59,8 +59,8 @@ runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
   v <- runExceptT $ runReaderT (evalContT interp) env
   case v of
-    Left err  -> print err
-    Right _ -> return ()
+    Left err  -> hPrint stderr err
+    Right r -> return ()
 
 -- 以命令行参数方式运行
 -- 显示版本号 fscm -v

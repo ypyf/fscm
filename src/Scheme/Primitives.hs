@@ -212,7 +212,11 @@ keywords =
 --
 
 quitProc :: [LispVal] -> InterpM LispVal
-quitProc _ = liftIO $ putStrLn "Bye!" >> liftIO exitSuccess
+quitProc [] = liftIO exitSuccess
+quitProc [Fixnum code] | code == 0 = liftIO exitSuccess
+                       | otherwise = liftIO $ exitWith $ ExitFailure $ fromIntegral code
+quitProc [arg] = throwError $ TypeMismatch "number" arg
+quitProc args = throwError $ NumArgs 1 args
 
 -- 载入源文件并求值
 loadProc :: [LispVal] -> InterpM LispVal
