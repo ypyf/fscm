@@ -81,10 +81,9 @@ apply (Func fn) args =
 
 apply (Continuation cont) args =
   case args of
-    []  -> cont Undefined
+    [] -> cont Undefined
     [x] -> cont x
-    --FIXME 多值
-    xs  -> mapM_ (fmap cont . eval) xs >> return Undefined
+    _ -> cont $ Values args
 
 apply (Closure params varargs body closure) args = do
   let nargs = length params
@@ -95,6 +94,7 @@ apply (Closure params varargs body closure) args = do
     val <- local (\r->M.union ctx r) $ evalBody body
     case val of
       List (TailCall a b c d:args) -> apply (Closure a b c d) args
+      Values vals                  -> fmap last (mapM eval vals)
       _                            -> return val
     where
       localEnv :: Int -> Maybe String -> IO Env

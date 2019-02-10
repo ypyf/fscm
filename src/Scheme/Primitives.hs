@@ -223,7 +223,6 @@ loadProc :: [LispVal] -> InterpM LispVal
 loadProc [String file] = liftIO (readFile file) >>= readLisp >>= eval
 loadProc args = throwError $ NumArgs 1 args
 
--- FIXME
 applyProc :: [LispVal] -> InterpM LispVal
 applyProc [] = throwError $ NumArgs 2 []
 applyProc val@[_] = throwError $ NumArgs 2 val
@@ -231,7 +230,6 @@ applyProc (fn:xs) =
     case last xs of
         List args -> apply fn (init xs ++ args)
         notList   -> throwError $ TypeMismatch "List" notList
-
 
 -- 参见 r5rs 6.5
 -- TODO 环境参数

@@ -116,8 +116,8 @@ showVal (List vals) = "(" ++ unwordsList vals ++ ")"
 showVal (DotList [] s1) = show s1
 showVal (DotList s0 s1) = "(" ++ unwordsList s0 ++ " . " ++ show s1 ++ ")"
 showVal (Module name) = "#<module:" ++ name ++ ">"
-showVal (Values vals) = "#<Values:" ++ show vals ++ ">"  -- only for debuy
-showVal x = "#<LispVal>"  -- only for debuy
+showVal (Values vals) = "#<Values:" ++ show vals ++ ">"  -- for debugging
+showVal x = "#<LispVal>"  -- for debugging
 
 -- instance Eq Lisp where x == y = eqv' x y
 
