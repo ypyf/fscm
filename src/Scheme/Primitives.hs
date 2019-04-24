@@ -535,8 +535,10 @@ stringFromCharList :: [LispVal] -> ThrowsError LispVal
 stringFromCharList [] = return $ String []
 stringFromCharList [Char arg] = return $ String [arg]
 stringFromCharList (Char arg : xs) = do
-  String rest <- stringFromCharList xs
-  return $ String $ arg:rest
+  r <- stringFromCharList xs
+  case r of
+    String rest -> return $ String $ arg:rest
+    err -> return err
 stringFromCharList [args] = throwError $ TypeMismatch "Char" args
 
 stringLength :: [LispVal] -> ThrowsError LispVal
