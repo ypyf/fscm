@@ -1,16 +1,18 @@
-## FSCM
+# fscm
 
-A Scheme (programming language) interpreter
+A Scheme interpreter.
 
+## Build
 
-## Build & Run
-    cd fscm/src
-    make
-    ./fscm.exe
+```shell
+stack build
+```
 
-## Install via Cabal package
-    cd fscm
-    cabal install
+## Run
+
+```shell
+stack exec fscm
+```
 
 ## TODO
 

@@ -1,14 +1,2 @@
-dist
-cabal-dev
-*.dll
-*.exe
-*.o
-*.hi
-*.chi
-*.chs.h
-
-# auto-generated file
-src/Scheme/Scan.hs
-src/Scheme/Parser.hs
-
-.DS_Store
+.stack-work/
+*~
