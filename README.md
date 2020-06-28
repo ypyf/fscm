@@ -2,6 +2,12 @@
 
 A Scheme interpreter.
 
+## Prerequisites
+
+```shell
+stack install happy alex
+```
+
 ## Build
 
 ```shell
