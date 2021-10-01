@@ -32,16 +32,16 @@ eval form@(List [Symbol "lambda", _]) = throwError $ BadSpecialForm "no expressi
 -- 固定参数
 -- (lambda (x ...) ...)
 eval (List (Symbol "lambda":List params:body)) =
-  fmap (Closure (map showVal params) Nothing body) ask
+  asks (Closure (map showVal params) Nothing body)
 
 -- 可变参数
 -- (lambda x ...)
-eval (List (Symbol "lambda":Symbol vararg:body)) = fmap (Closure [] (Just vararg) body) ask
+eval (List (Symbol "lambda":Symbol vararg:body)) = asks (Closure [] (Just vararg) body)
 
 -- 可变参数
 -- (lambda (x y . z) ...)
 eval (List (Symbol "lambda":dl@(DotList params (Symbol vararg)):body)) =
-  fmap (Closure (map showVal params) (Just vararg) body) ask
+  asks (Closure (map showVal params) (Just vararg) body)
 
 eval form@(DotList s0 s1) = throwError $ Default $ "illegal use of `.' in: " ++ show form
 
@@ -91,7 +91,7 @@ apply (Closure params varargs body closure) args = do
   else do
     locals <- liftIO $ localEnv nargs varargs
     let ctx = M.union locals closure
-    val <- local (\r->M.union ctx r) $ evalBody body
+    val <- local (M.union ctx) $ evalBody body
     case val of
       List (TailCall a b c d:args) -> apply (Closure a b c d) args
       Values vals                  -> fmap last (mapM eval vals)
