@@ -1,18 +1,16 @@
 module Scheme.Interp (defaultEnv, runInterp, evalString, runREPL, runOnce) where
 
-import Scheme.Types
-import Scheme.Primitives
-
-import System.IO
-import Data.IORef
 import Control.Exception.Base
 import Control.Monad
-import Control.Monad.Reader
 import Control.Monad.Except
-import Control.Monad.Trans.Cont
+import Control.Monad.Reader
 import Control.Monad.State.Lazy
+import Control.Monad.Trans.Cont
+import Data.IORef
 import qualified Data.Map.Strict as M
-
+import Scheme.Primitives
+import Scheme.Types
+import System.IO
 
 -- 缺省环境
 defaultEnv :: IO Env
@@ -41,25 +39,26 @@ prompt str = putStr str >> hFlush stdout
 -- TODO 使用Scheme本身去写REPL
 runREPL :: String -> IO ()
 runREPL str = defaultEnv >>= \e -> runInterp e repl
- where
-   repl :: InterpM LispVal
-   repl = do
-     loadStdlib `catchError` loaderErrorHandler
-     forever $ liftIO (prompt str) >> interp
-   interp :: InterpM LispVal
-   interp = do
-     -- TODO 检查语法后再调用readLisp
-     x <- readProc [] `catchError` readerErrorHandler
-     r <- evalProc [x] `catchError` errorHandler
-     case r of
-      Undefined -> return Undefined
-      _         -> liftIO (print r) >> return Undefined
+  where
+    repl :: InterpM LispVal
+    repl = do
+      loadStdlib `catchError` loaderErrorHandler
+      forever $ liftIO (prompt str) >> interp
+    interp :: InterpM LispVal
+    interp = do
+      -- TODO 检查语法后再调用readLisp
+      x <- readProc [] `catchError` readerErrorHandler
+      r <- evalProc [x] `catchError` errorHandler
+      case r of
+        Undefined -> return Undefined
+        List (TailCall a b c d : args) -> evalProc [r]
+        _ -> liftIO (print r) >> return Undefined
 
 runInterp :: Env -> InterpM LispVal -> IO ()
 runInterp env interp = do
   v <- runExceptT $ runReaderT (evalContT interp) env
   case v of
-    Left err  -> hPrint stderr err
+    Left err -> hPrint stderr err
     Right r -> return ()
 
 -- 以命令行参数方式运行
@@ -68,9 +67,9 @@ runInterp env interp = do
 -- 执行程序前不加载标准库 fscm -x path/to/program
 -- 执行单行代码 fscm -e "program"
 runOnce :: [String] -> IO ()
-runOnce ("-v":_) = putStrLn "FSCM version 0.1.1"
-runOnce ("-x":path:_) = defaultEnv >>= \e -> runInterp e $ loadProc [String path]
-runOnce ("-e":expr:_) = defaultEnv >>= \e -> runInterp e $ loadStdlib >> evalPrint expr
+runOnce ("-v" : _) = putStrLn "FSCM version 0.1.1"
+runOnce ("-x" : path : _) = defaultEnv >>= \e -> runInterp e $ loadProc [String path]
+runOnce ("-e" : expr : _) = defaultEnv >>= \e -> runInterp e $ loadStdlib >> evalPrint expr
 runOnce [path] = defaultEnv >>= \e -> runInterp e $ loadStdlib >> loadProc [String path]
 runOnce args = putStrLn $ "Invalid Options: " ++ show args
 
@@ -82,7 +81,7 @@ evalPrint expr = do
   r <- evalString [String expr]
   case r of
     Undefined -> return Undefined
-    _         -> liftIO (print r) >> return Undefined
+    _ -> liftIO (print r) >> return Undefined
 
 errorHandler :: LispError -> InterpM LispVal
 errorHandler e = liftIO (print e) >> return Undefined
