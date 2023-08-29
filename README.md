@@ -2,15 +2,10 @@
 
 A Scheme interpreter.
 
-## Prerequisites
-
-```shell
-stack install happy alex
-```
-
 ## Build
 
 ```shell
+stack install happy alex
 stack build
 ```
 
@@ -18,6 +13,14 @@ stack build
 
 ```shell
 stack exec fscm
+```
+
+## Install
+
+Optionally, you could copy the generated executable **fscm** to `~/.local/bin` (Unix-like operating systems) or `~/AppData\Roaming\local\bin` (Windows):
+
+```shell
+stack install
 ```
 
 ## TODO

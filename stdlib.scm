@@ -116,21 +116,3 @@
 
 (define println
 	(lambda (a) (display a)(newline)))
-
-;; Óï·¨¹Ø¼ü×Ö
-(define-syntax and
-    (syntax-rules ()
-        ((and) #t)
-        ((and test) test)
-        ((and test1 test2 ...)
-            (if test1 (and test2 ...) #f))))
-
-;(define-syntax begin
-;  (syntax-rules ()
-;	((begin exp ...)
-;	 ((lambda () exp ...)))))
-
-;(define-syntax let/cc
-;  (syntax-rules ()
-;    ((let/cc k body) (call/cc (lambda (k) body)))))
-

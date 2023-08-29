@@ -1,14 +1,14 @@
 name: fscm
 version: 0.1.0.0
-github: "ypyf/fscm"
+github: 'ypyf/fscm'
 license: MIT
-author: "Yan Feng"
-maintainer: "t34@qq.com"
-copyright: "2020 Yan Feng"
+author: 'Yan Feng'
+maintainer: 't34@qq.com'
+copyright: '2023 Yan Feng'
 
 extra-source-files:
   - README.md
-  - ChangeLog.md
+  - CHANGELOG.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -21,15 +21,25 @@ description: Please see the README on GitHub at <https://github.com/ypyf/fscm#re
 
 dependencies:
   - base >= 4.7 && < 5
+  - array
+  - mtl
+  - transformers
+  - containers
+  - time
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
 
 library:
   source-dirs: src
-  dependencies:
-    - array
-    - mtl
-    - transformers
-    - containers
-    - time
 
 executables:
   fscm:
