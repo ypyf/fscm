@@ -4,7 +4,6 @@ import Control.Exception.Base
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Reader
-import Control.Monad.State.Lazy
 import Control.Monad.Trans.Cont
 import Data.IORef
 import qualified Data.Map.Strict as M

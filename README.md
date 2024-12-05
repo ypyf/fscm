@@ -2,30 +2,22 @@
 
 A Scheme interpreter.
 
-## Build
+## Build & Install
 
 ```shell
-stack install happy alex
-stack build
+cabal build
+cabal install
 ```
 
 ## Run
 
 ```shell
-stack exec fscm
-```
-
-## Install
-
-Optionally, you could copy the generated executable **fscm** to `~/.local/bin` (Unix-like operating systems) or `~/AppData\Roaming\local\bin` (Windows):
-
-```shell
-stack install
+fscm
 ```
 
 ## TODO
 
-* Number tower
+* Numeric tower
 * Macro
 * Data structure e.g. vector, map
 * Native code generation

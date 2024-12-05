@@ -4,7 +4,7 @@ github: 'ypyf/fscm'
 license: MIT
 author: 'Yan Feng'
 maintainer: 't34@qq.com'
-copyright: '2023 Yan Feng'
+copyright: '2024 Yan Feng'
 
 extra-source-files:
   - README.md

@@ -4,19 +4,12 @@
 
 module Scheme.Types where
 
-import Data.Ratio
 import Control.Monad.Except
 import System.IO
 import Data.IORef
 import qualified Data.Map.Strict as M
-import Data.Functor.Identity
-import Data.Monoid
 import Control.Monad.Reader
 import Control.Monad.Cont
-import Control.Monad.Trans
-import Control.Monad.State.Lazy
-import Control.Monad.Trans.Cont
-
 
 -- value list helpervalue list helper
 unwordsList :: [LispVal] -> String

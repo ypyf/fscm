@@ -11,7 +11,7 @@ homepage:       https://github.com/ypyf/fscm#readme
 bug-reports:    https://github.com/ypyf/fscm/issues
 author:         Yan Feng
 maintainer:     t34@qq.com
-copyright:      2023 Yan Feng
+copyright:      2024 Yan Feng
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple

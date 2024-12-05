@@ -2,10 +2,7 @@ module Scheme.Eval (eval, evalqq, evalTail, apply) where
 
 import Control.Monad.Except
 import Control.Monad.Reader
-import Control.Monad.State.Lazy
-import Control.Monad.Trans.Cont
 import Data.IORef
-import Data.List
 import qualified Data.Map.Strict as M
 import Data.Maybe (isNothing)
 import Scheme.Types
@@ -94,6 +91,7 @@ apply (Closure params varargs body closure) args = do
       v1 <- liftIO $ newIORef (List $ drop nargs args)
       return $ M.fromList $ zip params v0 ++ [(argName, v1)]
     evalBody :: [LispVal] -> InterpM LispVal
+    evalBody [] = undefined
     evalBody [x] = evalTail x
     evalBody (x : xs) = eval x >> evalBody xs
 apply given args =
@@ -126,17 +124,17 @@ evalqq' level v@(List [Symbol "quasiquote", expr]) = do
 evalqq' level v@(List [Symbol "unquote", expr])
   | level == 0 = eval expr
   | otherwise = do
-    v' <- evalqq' (level -1) expr
-    case v' of
-      Slice s -> return $ List $ Symbol "unquote" : s
-      _ -> return $ List [Symbol "unquote", v']
+      v' <- evalqq' (level - 1) expr
+      case v' of
+        Slice s -> return $ List $ Symbol "unquote" : s
+        _ -> return $ List [Symbol "unquote", v']
 evalqq' level v@(List [Symbol "unquote-splicing", expr])
   | level == 0 = eval expr >>= splice
   | otherwise = do
-    v' <- evalqq' (level -1) expr
-    case v' of
-      Slice s -> return $ List $ Symbol "unquote-splicing" : s
-      _ -> return $ List [Symbol "unquote-splicing", v']
+      v' <- evalqq' (level - 1) expr
+      case v' of
+        Slice s -> return $ List $ Symbol "unquote-splicing" : s
+        _ -> return $ List [Symbol "unquote-splicing", v']
   where
     splice :: LispVal -> InterpM LispVal
     splice (List lst) = return $ Slice lst
